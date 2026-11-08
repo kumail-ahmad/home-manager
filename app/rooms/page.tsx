@@ -195,7 +195,7 @@ export default function RoomsPage() {
             </button>
           </div></div>
         ) : (
-          <div className="grid-cards" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
              {app.rooms.filter(room => room.roomNumber.toLowerCase().includes(search.toLowerCase())).map(room => {
               const occupants = app.residents.filter(r => room.residentIds.includes(r.id));
               const full = occupants.length >= room.capacity;

@@ -19,14 +19,14 @@ export default function Home() {
         </p>
 
         {/* Features */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px", marginBottom: "32px", textAlign: "left" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mb-8 text-left">
           {[
             { icon: Users,      label: "Resident Management", desc: "Profiles, guardian details, rooms" },
             { icon: CreditCard, label: "Rent Tracking",       desc: "Charges, payments, balances" },
             { icon: Zap,        label: "Electricity Bills",   desc: "Bills, allocations, meter readings" },
             { icon: BarChart2,  label: "Reports & Exports",   desc: "CSV exports, monthly summaries" },
           ].map(f => (
-            <div key={f.label} style={{ background: "white", border: "1px solid var(--stone-200)", borderRadius: "10px", padding: "12px 14px" }}>
+            <div key={f.label} className="bg-white border border-[var(--stone-200)] rounded-xl p-3.5 shadow-2xs">
               <f.icon style={{ width: 18, height: 18, color: "var(--blush-500)", marginBottom: "6px" }} />
               <p style={{ fontWeight: 600, fontSize: "13px", color: "var(--stone-800)" }}>{f.label}</p>
               <p style={{ fontSize: "12px", color: "var(--stone-400)" }}>{f.desc}</p>

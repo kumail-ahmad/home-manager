@@ -117,34 +117,66 @@ export default function DashboardPage() {
   return (
     <>
       {/* Page header */}
-      <div className="page-header">
+      <div className="page-header relative z-10">
         <div>
           <h1 className="page-title">Dashboard</h1>
           <p className="page-desc">{month} · Home Operations &amp; Financial Overview</p>
         </div>
-         <div style={{ display: "flex", gap: "8px", flexWrap: "wrap" }}>
-           <label className="sr-only" htmlFor="dashboard-month">Dashboard month</label>
-           <select id="dashboard-month" className="form-select" style={{ width: "auto" }} value={month} onChange={e => setMonth(e.target.value)}>
-             {monthOptions.map(option => <option key={option} value={option}>{option}</option>)}
-           </select>
-          <button className="btn btn-secondary btn-sm" onClick={() => setShowMeter(true)}>
+        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <label className="sr-only" htmlFor="dashboard-month">Dashboard month</label>
+          <select id="dashboard-month" className="form-select w-full sm:w-auto" value={month} onChange={e => setMonth(e.target.value)}>
+            {monthOptions.map(option => <option key={option} value={option}>{option}</option>)}
+          </select>
+          <button className="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center" onClick={() => setShowMeter(true)}>
             <Zap className="h-3.5 w-3.5" /> Log Meter Reading
           </button>
-          <button className="btn btn-secondary btn-sm" onClick={() => setShowPayment(true)}>
+          <button className="btn btn-secondary btn-sm flex-1 sm:flex-none justify-center" onClick={() => setShowPayment(true)}>
             <CreditCard className="h-3.5 w-3.5" /> Record Payment
           </button>
-          <button className="btn btn-primary btn-sm" onClick={() => setShowAddResident(true)}>
+          <button className="btn btn-primary btn-sm w-full sm:w-auto justify-center" onClick={() => setShowAddResident(true)}>
             <Plus className="h-3.5 w-3.5" /> Add Resident
           </button>
         </div>
       </div>
 
-      <div className="page-body" style={{ flexGrow: 1 }}>
+      <div className="page-body relative z-10" style={{ flexGrow: 1 }}>
 
-        {/* Stat cards */}
-        <div className="grid-cards grid-stats mb-6">
+        {/* Ambient Floral Watermark Background */}
+        <div
+          className="pointer-events-none fixed inset-0 z-0 opacity-[0.06] bg-repeat"
+          style={{
+            backgroundImage: "url('/dashboard-flower-bg.png')",
+            backgroundSize: "680px auto",
+            backgroundPosition: "top right",
+          }}
+          aria-hidden="true"
+        />
+
+        {/* Welcome Hero Banner with Decorative Floral Artwork */}
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-[#fdf4f4] via-[#faf8f5] to-[#f2f6ef] border border-[#f8d0ce] p-5 sm:p-6 mb-6 shadow-xs">
+          <div className="relative z-10 max-w-xl">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-white/90 text-[var(--blush-600)] border border-[var(--blush-200)] mb-2 shadow-xs">
+              <span className="w-2 h-2 rounded-full bg-[var(--blush-500)] animate-pulse" />
+              Home Management Live
+            </span>
+            <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--stone-800)]">
+              Welcome back, {app.currentUser?.fullName || "Administrator"}
+            </h2>
+            <p className="text-xs sm:text-sm text-[var(--stone-500)] mt-1.5 leading-relaxed">
+              Real-time room occupancy, rent collections, and electricity allocations synchronized across all devices.
+            </p>
+          </div>
+          <div
+            className="absolute right-[-10px] top-[-10px] bottom-[-10px] w-48 sm:w-80 pointer-events-none opacity-25 sm:opacity-35 bg-no-repeat bg-contain bg-right-center"
+            style={{ backgroundImage: "url('/dashboard-flower-bg.png')" }}
+            aria-hidden="true"
+          />
+        </div>
+
+        {/* Primary Stat cards: Straight line on mobile (grid-cols-1), responsive grid on larger screens */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5 mb-6">
           {statCards.map(c => (
-            <div key={c.label} className="stat-card" style={{ borderTop: `3px solid ${c.color}` }}>
+            <div key={c.label} className="stat-card w-full" style={{ borderTop: `3px solid ${c.color}` }}>
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
                 <span className="stat-label">{c.label}</span>
                 <div style={{ background: c.bg, borderRadius: "8px", padding: "6px" }}>
@@ -157,27 +189,27 @@ export default function DashboardPage() {
           ))}
         </div>
 
-        {/* Secondary stats row */}
-        <div className="grid-cards mb-6" style={{ gridTemplateColumns: "1fr 1fr 1fr", gap: "14px" }}>
+        {/* Secondary stats row: Straight line on mobile, 3 columns on tablet/desktop */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 mb-6">
           {[
             { label: "Total Rent Charged", value: formatRupee(s.rentCharged), icon: TrendingUp, color: "#3b82f6" },
             { label: "Total Electricity Billed", value: formatRupee(s.elecBilled), icon: Zap, color: "#f59e0b" },
             { label: "Total Outstanding", value: formatRupee(s.rentOutstanding + s.elecOutstanding), icon: AlertCircle, color: "#ef4444" },
           ].map(c => (
-            <div key={c.label} className="card" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <div style={{ background: `${c.color}18`, borderRadius: "8px", padding: "8px" }}>
+            <div key={c.label} className="card w-full" style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+              <div style={{ background: `${c.color}18`, borderRadius: "8px", padding: "9px" }}>
                 <c.icon className="h-4 w-4" style={{ color: c.color }} />
               </div>
-              <div>
-                <p className="stat-label">{c.label}</p>
-                <p style={{ fontWeight: 700, fontSize: "15px", color: "var(--stone-800)" }}>{c.value}</p>
+              <div className="min-w-0 flex-1">
+                <p className="stat-label truncate">{c.label}</p>
+                <p style={{ fontWeight: 700, fontSize: "16px", color: "var(--stone-800)" }}>{c.value}</p>
               </div>
             </div>
           ))}
         </div>
 
-        {/* Lower section: activity + quick actions */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: "16px" }}>
+        {/* Lower section: activity + quick actions: Stacks in straight cards one by one on mobile */}
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_340px] gap-4 items-start">
 
           {/* Recent activity */}
           <div className="card">

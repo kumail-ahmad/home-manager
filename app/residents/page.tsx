@@ -140,71 +140,136 @@ export default function ResidentsPage() {
               )}
             </div>
           ) : (
-            <div className="overflow-table-wrap">
-              <table className="data-table">
-                <thead>
-                  <tr>
-                    <th>Name</th>
-                    <th>Phone</th>
-                    <th>Room</th>
-                    <th>College / Course</th>
-                    <th>Rent/mo</th>
-                    <th>Joining</th>
-                    <th>Status</th>
-                    <th></th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filtered.map(r => {
-                    const bal = app.getResidentRentBalance(r.id);
-                    return (
-                      <tr key={r.id}>
-                        <td>
-                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                            <div className="avatar">{r.fullName.split(" ").map(n => n[0]).join("").slice(0, 2)}</div>
-                            <div>
-                              <p style={{ fontWeight: 500, color: "var(--stone-800)" }}>{r.fullName}</p>
-                              {r.guardianName && <p style={{ fontSize: "11px", color: "var(--stone-400)" }}>Guardian: {r.guardianName}</p>}
+            <>
+              {/* Mobile Straight Cards (1 by 1) */}
+              <div className="md:hidden flex flex-col gap-3">
+                {filtered.map(r => {
+                  const bal = app.getResidentRentBalance(r.id);
+                  return (
+                    <div key={r.id} className="p-3.5 bg-white border border-[var(--stone-200)] rounded-xl shadow-2xs space-y-2.5">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2.5">
+                          <div className="avatar">
+                            {r.fullName.split(" ").map(n => n[0]).join("").slice(0, 2)}
+                          </div>
+                          <div>
+                            <p className="font-semibold text-sm text-[var(--stone-800)]">{r.fullName}</p>
+                            <p className="text-xs text-[var(--stone-400)]">{r.phone}</p>
+                          </div>
+                        </div>
+                        <span className={`badge ${r.status === "active" ? "badge-green" : "badge-stone"}`}>
+                          {r.status}
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 text-xs pt-1 border-t border-[var(--stone-100)]">
+                        <div>
+                          <span className="text-[var(--stone-400)] block">Room</span>
+                          <span className="font-medium text-[var(--stone-700)]">
+                            {r.roomNumber ? `Room ${r.roomNumber}` : "Unassigned"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="text-[var(--stone-400)] block">Rent</span>
+                          <span className="font-medium text-[var(--stone-700)]">
+                            {formatRupee(r.monthlyRent)}/mo
+                          </span>
+                        </div>
+                      </div>
+                      {bal.outstanding > 0 && (
+                        <p className="text-xs text-red-600 font-semibold">
+                          Due: {formatRupee(bal.outstanding)}
+                        </p>
+                      )}
+                      <div className="flex items-center gap-2 pt-2 border-t border-[var(--stone-100)]">
+                        <button className="btn btn-secondary btn-sm flex-1" onClick={() => setViewing(r)}>
+                          <Eye className="h-3 w-3" /> View
+                        </button>
+                        <button className="btn btn-secondary btn-sm flex-1" onClick={() => setEditing(r)}>
+                          <Edit2 className="h-3 w-3" /> Edit
+                        </button>
+                        {r.status === "active" && (
+                          <button className="btn btn-ghost btn-sm text-red-500" onClick={() => setConfirmDeactivate(r)}>
+                            <UserX className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                        {r.status === "inactive" && (
+                          <button className="btn btn-ghost btn-sm text-emerald-600" onClick={() => handleReactivate(r)}>
+                            <UserCheck className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Desktop Table */}
+              <div className="hidden md:block overflow-table-wrap">
+                <table className="data-table">
+                  <thead>
+                    <tr>
+                      <th>Name</th>
+                      <th>Phone</th>
+                      <th>Room</th>
+                      <th>College / Course</th>
+                      <th>Rent/mo</th>
+                      <th>Joining</th>
+                      <th>Status</th>
+                      <th></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filtered.map(r => {
+                      const bal = app.getResidentRentBalance(r.id);
+                      return (
+                        <tr key={r.id}>
+                          <td>
+                            <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                              <div className="avatar">{r.fullName.split(" ").map(n => n[0]).join("").slice(0, 2)}</div>
+                              <div>
+                                <p style={{ fontWeight: 500, color: "var(--stone-800)" }}>{r.fullName}</p>
+                                {r.guardianName && <p style={{ fontSize: "11px", color: "var(--stone-400)" }}>Guardian: {r.guardianName}</p>}
+                              </div>
                             </div>
-                          </div>
-                        </td>
-                        <td style={{ fontFamily: "monospace", fontSize: "13px" }}>{r.phone}</td>
-                        <td>{r.roomNumber ? <span className="badge badge-blue">Room {r.roomNumber}</span> : <span style={{ color: "var(--stone-300)" }}>—</span>}</td>
-                        <td>
-                          <p style={{ fontSize: "12px" }}>{r.college || "—"}</p>
-                          {r.course && <p style={{ fontSize: "11px", color: "var(--stone-400)" }}>{r.course}</p>}
-                        </td>
-                        <td style={{ fontWeight: 600 }}>{formatRupee(r.monthlyRent)}</td>
-                        <td style={{ fontSize: "12px", whiteSpace: "nowrap" }}>{formatDate(r.joiningDate)}</td>
-                        <td>
-                          {r.status === "active"
-                            ? <span className="badge badge-green">Active</span>
-                            : <span className="badge badge-stone">Inactive</span>}
-                          {bal.outstanding > 0 && (
-                            <span className="badge badge-red" style={{ marginLeft: "4px" }}>Due {formatRupee(bal.outstanding)}</span>
-                          )}
-                          {bal.advance > 0 && (
-                            <span className="badge badge-blue" style={{ marginLeft: "4px" }}>Advance {formatRupee(bal.advance)}</span>
-                          )}
-                        </td>
-                        <td style={{ position: "relative", textAlign: "right" }}>
-                          <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
-                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setViewing(r)} title="View details"><Eye className="h-3.5 w-3.5" /></button>
-                            <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setEditing(r)} title="Edit"><Edit2 className="h-3.5 w-3.5" /></button>
-                             {r.status === "active" && (
-                               <button className="btn btn-ghost btn-icon btn-sm" style={{ color: "#ef4444" }} onClick={() => setConfirmDeactivate(r)} title="Deactivate"><UserX className="h-3.5 w-3.5" /></button>
-                             )}
-                             {r.status === "inactive" && (
-                               <button className="btn btn-ghost btn-icon btn-sm" style={{ color: "var(--sage-600)" }} onClick={() => handleReactivate(r)} title="Reactivate"><UserCheck className="h-3.5 w-3.5" /></button>
-                             )}
-                          </div>
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
+                          </td>
+                          <td style={{ fontFamily: "monospace", fontSize: "13px" }}>{r.phone}</td>
+                          <td>{r.roomNumber ? <span className="badge badge-blue">Room {r.roomNumber}</span> : <span style={{ color: "var(--stone-300)" }}>—</span>}</td>
+                          <td>
+                            <p style={{ fontSize: "12px" }}>{r.college || "—"}</p>
+                            {r.course && <p style={{ fontSize: "11px", color: "var(--stone-400)" }}>{r.course}</p>}
+                          </td>
+                          <td style={{ fontWeight: 600 }}>{formatRupee(r.monthlyRent)}</td>
+                          <td style={{ fontSize: "12px", whiteSpace: "nowrap" }}>{formatDate(r.joiningDate)}</td>
+                          <td>
+                            {r.status === "active"
+                              ? <span className="badge badge-green">Active</span>
+                              : <span className="badge badge-stone">Inactive</span>}
+                            {bal.outstanding > 0 && (
+                              <span className="badge badge-red" style={{ marginLeft: "4px" }}>Due {formatRupee(bal.outstanding)}</span>
+                            )}
+                            {bal.advance > 0 && (
+                              <span className="badge badge-blue" style={{ marginLeft: "4px" }}>Advance {formatRupee(bal.advance)}</span>
+                            )}
+                          </td>
+                          <td style={{ position: "relative", textAlign: "right" }}>
+                            <div style={{ display: "flex", gap: "4px", justifyContent: "flex-end" }}>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setViewing(r)} title="View details"><Eye className="h-3.5 w-3.5" /></button>
+                              <button className="btn btn-ghost btn-icon btn-sm" onClick={() => setEditing(r)} title="Edit"><Edit2 className="h-3.5 w-3.5" /></button>
+                               {r.status === "active" && (
+                                 <button className="btn btn-ghost btn-icon btn-sm" style={{ color: "#ef4444" }} onClick={() => setConfirmDeactivate(r)} title="Deactivate"><UserX className="h-3.5 w-3.5" /></button>
+                               )}
+                               {r.status === "inactive" && (
+                                 <button className="btn btn-ghost btn-icon btn-sm" style={{ color: "var(--sage-600)" }} onClick={() => handleReactivate(r)} title="Reactivate"><UserCheck className="h-3.5 w-3.5" /></button>
+                               )}
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </>
           )}
         </div>
       </div>

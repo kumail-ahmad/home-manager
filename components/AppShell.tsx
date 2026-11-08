@@ -62,20 +62,15 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   // Authenticated user on protected page: render sidebar, mobile spacer, and main offset
   return (
-    <>
+    <div className="min-h-screen flex flex-col w-full bg-[var(--ivory)] text-[var(--stone-800)]">
       <AppSidebar />
-      <div
-        style={{
-          marginLeft: "var(--sidebar-w)",
-          minHeight: "100vh",
-          display: "flex",
-          flexDirection: "column",
-        }}
-        className="main-offset"
-      >
-        <div style={{ height: "56px" }} className="mobile-spacer" aria-hidden="true" />
-        {children}
+      <div className="flex-1 flex flex-col min-w-0 w-full md:pl-[252px]">
+        {/* 56px spacer for mobile fixed topbar */}
+        <div className="h-14 md:hidden shrink-0" aria-hidden="true" />
+        <main className="flex-1 w-full min-w-0 overflow-x-hidden">
+          {children}
+        </main>
       </div>
-    </>
+    </div>
   );
 }
