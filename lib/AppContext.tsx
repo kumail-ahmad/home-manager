@@ -239,9 +239,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsLoadingBackend(true);
     try {
       const data = await fetchInitialDataFromSupabase();
-      if (data && data.residents.length > 0) {
+      if (data) {
         setState({
-          admins: data.admins,
+          admins: data.admins.length > 0 ? data.admins : DEFAULT_INITIAL_ADMINS,
           residents: data.residents,
           rooms: data.rooms,
           rentCharges: data.rentCharges,
@@ -252,8 +252,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           meterReadings: data.meterReadings,
           activityLog: data.activityLog,
         });
-        setIsLiveBackend(true);
-      } else if (data) {
         setIsLiveBackend(true);
       }
     } catch (err) {

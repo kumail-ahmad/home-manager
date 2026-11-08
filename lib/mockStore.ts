@@ -104,92 +104,17 @@ export interface ActivityLog {
   details: string;
 }
 
-let residents: Resident[] = [];
-let rooms: Room[] = [];
-let rentCharges: RentCharge[] = [];
-let rentPayments: RentPayment[] = [];
-let electricityBills: ElectricityBill[] = [];
-let electricityAllocations: ElectricityAllocation[] = [];
-let electricityPayments: ElectricityPayment[] = [];
-let meterReadings: MeterReading[] = [];
-let activityLog: ActivityLog[] = [];
+const residents: Resident[] = [];
+const rooms: Room[] = [];
+const rentCharges: RentCharge[] = [];
+const rentPayments: RentPayment[] = [];
+const electricityBills: ElectricityBill[] = [];
+const electricityAllocations: ElectricityAllocation[] = [];
+const electricityPayments: ElectricityPayment[] = [];
+const meterReadings: MeterReading[] = [];
+const activityLog: ActivityLog[] = [];
 
-const id = (prefix: string, number: number) => `${prefix}-${number}`;
 const now = () => new Date().toISOString();
-const currentMonth = () => currentMonthKey();
-
-function seedInitialData() {
-  const month = currentMonth();
-  const previous = (() => {
-    const d = new Date(`${month}-01T12:00:00`);
-    d.setMonth(d.getMonth() - 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-  })();
-
-  residents = [
-    ["Ananya Rao", "9876501001", "Meera Rao", "9876502001", "BMS College of Engineering", "B.Tech CSE", "101"],
-    ["Diya Nair", "9876501002", "Suresh Nair", "9876502002", "Mount Carmel College", "B.Com", "101"],
-    ["Ishita Menon", "9876501003", "Kavita Menon", "9876502003", "Christ University", "BBA", "101"],
-    ["Kavya Shah", "9876501004", "Rakesh Shah", "9876502004", "PES University", "B.Arch", "102"],
-    ["Megha Iyer", "9876501005", "Latha Iyer", "9876502005", "RV College of Engineering", "B.Tech ECE", "102"],
-    ["Nandini Das", "9876501006", "Anil Das", "9876502006", "St. Joseph's University", "BA Economics", "201"],
-    ["Pooja Kulkarni", "9876501007", "Sunita Kulkarni", "9876502007", "Bangalore University", "MCA", "201"],
-    ["Riya Thomas", "9876501008", "Mathew Thomas", "9876502008", "Christ University", "M.Sc Psychology", "202"],
-    ["Saanvi Gupta", "9876501009", "Nitin Gupta", "9876502009", "Jain University", "B.Des", "202"],
-    ["Tanvi Bhat", "9876501010", "Shobha Bhat", "9876502010", "BMS College of Engineering", "B.Tech IT", "301"],
-    ["Vaishnavi Joshi", "9876501011", "Amit Joshi", "9876502011", "Mount Carmel College", "B.Sc", "301"],
-    ["Zoya Khan", "9876501012", "Farah Khan", "9876502012", "PES University", "BCA", "302"],
-    ["Aditi Sen", "9876501013", "Madhuri Sen", "9876502013", "Jain University", "MBA", ""],
-    ["Bhavana Shetty", "9876501014", "Ramesh Shetty", "9876502014", "Bangalore University", "M.Com", ""],
-  ].map((r, index): Resident => ({
-    id: id("resident", index + 1), fullName: r[0], phone: r[1], guardianName: r[2], guardianPhone: r[3],
-    college: r[4], course: r[5], roomNumber: r[6] || null, monthlyRent: 780000 + (index % 3) * 20000,
-    joiningDate: `${2025 + (index % 2)}-0${(index % 8) + 1}-05`, status: "active", notes: index === 4 ? "Prefers UPI for payments." : "",
-  }));
-
-  rooms = [
-    { id: id("room", 1), roomNumber: "101", capacity: 3, residentIds: ["resident-1", "resident-2", "resident-3"], notes: "North wing" },
-    { id: id("room", 2), roomNumber: "102", capacity: 3, residentIds: ["resident-4", "resident-5"], notes: "North wing" },
-    { id: id("room", 3), roomNumber: "201", capacity: 4, residentIds: ["resident-6", "resident-7"], notes: "Garden-facing" },
-    { id: id("room", 4), roomNumber: "202", capacity: 4, residentIds: ["resident-8", "resident-9"], notes: "Garden-facing" },
-    { id: id("room", 5), roomNumber: "301", capacity: 4, residentIds: ["resident-10", "resident-11"], notes: "Quiet floor" },
-    { id: id("room", 6), roomNumber: "302", capacity: 4, residentIds: ["resident-12"], notes: "Quiet floor" },
-    { id: id("room", 7), roomNumber: "401", capacity: 4, residentIds: [], notes: "Available" },
-  ];
-
-  const createdAt = `${month}-01T08:00:00.000Z`;
-  rentCharges = residents.flatMap((resident, index) => [
-    { id: id("rent-prev", index + 1), residentId: resident.id, month: previous, amountPaise: resident.monthlyRent, createdAt },
-    { id: id("rent", index + 1), residentId: resident.id, month, amountPaise: resident.monthlyRent, createdAt },
-  ]);
-
-  rentPayments = residents.flatMap((resident, index) => {
-    const previousAmount = resident.monthlyRent;
-    const currentAmount = index < 7 ? resident.monthlyRent : index < 10 ? Math.round(resident.monthlyRent * 0.45) : 0;
-    return [
-      ...(previousAmount ? [{ id: id("rent-payment-prev", index + 1), residentId: resident.id, chargeId: id("rent-prev", index + 1), billingPeriod: previous, amountPaise: previousAmount, paymentDate: `${previous}-06T10:30:00.000Z`, method: index % 2 ? "upi" as const : "bank_transfer" as const, reference: `FH${previous.replace("-", "")}P${index + 1}`, notes: "Monthly payment" }] : []),
-      ...(currentAmount ? [{ id: id("rent-payment", index + 1), residentId: resident.id, chargeId: id("rent", index + 1), billingPeriod: month, amountPaise: currentAmount, paymentDate: `${month}-05T10:30:00.000Z`, method: index % 3 ? "upi" as const : "cash" as const, reference: `FH${month.replace("-", "")}P${index + 1}`, notes: "Monthly payment" }] : []),
-    ];
-  });
-
-  const selectedResidents = residents.filter(r => r.status === "active").map(r => r.id);
-  const bill: ElectricityBill = { id: "bill-1", periodLabel: new Date(`${month}-01T12:00:00`).toLocaleDateString("en-IN", { month: "long", year: "numeric" }), periodStart: `${month}-01`, periodEnd: `${month}-25`, totalAmountPaise: 240000, allocationMethod: "shared", residentIds: selectedResidents, dueDate: `${month}-30`, createdAt };
-  electricityBills = [bill];
-  const baseShare = Math.floor(bill.totalAmountPaise / selectedResidents.length);
-  electricityAllocations = selectedResidents.map((residentId, index) => ({ id: id("allocation", index + 1), billId: bill.id, residentId, sharePaise: baseShare + (index < bill.totalAmountPaise % selectedResidents.length ? 1 : 0) }));
-  electricityPayments = electricityAllocations.slice(0, 6).map((allocation, index) => ({ id: id("electricity-payment", index + 1), allocationId: allocation.id, residentId: allocation.residentId, amountPaise: allocation.sharePaise, paymentDate: `${month}-08T12:00:00.000Z`, method: "upi" as const, reference: `ELEC${month.replace("-", "")}${index + 1}`, notes: "Utility payment" }));
-  meterReadings = [
-    { id: "meter-1", roomNumber: "101", readingDate: `${month}-25`, units: 1248, notes: "Monthly reading" },
-    { id: "meter-2", roomNumber: "201", readingDate: `${month}-25`, units: 986, notes: "Monthly reading" },
-  ];
-  activityLog = [
-    { id: "activity-1", timestamp: `${month}-08T12:00:00.000Z`, action: "Payment", entityType: "Electricity", entityLabel: residents[0].fullName, details: `₹${(electricityPayments[0].amountPaise / 100).toLocaleString("en-IN")} via UPI` },
-    { id: "activity-2", timestamp: `${month}-05T10:30:00.000Z`, action: "Payment", entityType: "Rent", entityLabel: residents[0].fullName, details: `₹${(residents[0].monthlyRent / 100).toLocaleString("en-IN")} via UPI` },
-    { id: "activity-3", timestamp: `${month}-01T08:00:00.000Z`, action: "Created", entityType: "Electricity Bill", entityLabel: bill.periodLabel, details: "₹2,400 shared across 14 residents" },
-  ];
-}
-
-seedInitialData();
 
 export const getResidents = () => [...residents];
 export const getRooms = () => [...rooms];
