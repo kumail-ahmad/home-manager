@@ -158,19 +158,19 @@ export default function DashboardPage() {
         </div>
 
         {/* Secondary stats row */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 sm:gap-3.5 mb-5 sm:mb-6">
           {[
             { label: "Total Rent Charged", value: formatRupee(s.rentCharged), icon: TrendingUp, color: "#3b82f6" },
             { label: "Total Electricity Billed", value: formatRupee(s.elecBilled), icon: Zap, color: "#f59e0b" },
             { label: "Total Outstanding", value: formatRupee(s.rentOutstanding + s.elecOutstanding), icon: AlertCircle, color: "#ef4444" },
           ].map(c => (
-            <div key={c.label} className="card" style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-              <div style={{ background: `${c.color}18`, borderRadius: "8px", padding: "8px" }}>
+            <div key={c.label} className="card" style={{ display: "flex", alignItems: "center", gap: "10px", padding: "12px 14px" }}>
+              <div style={{ background: `${c.color}18`, borderRadius: "8px", padding: "7px" }}>
                 <c.icon className="h-4 w-4" style={{ color: c.color }} />
               </div>
               <div>
-                <p className="stat-label">{c.label}</p>
-                <p style={{ fontWeight: 700, fontSize: "15px", color: "var(--stone-800)" }}>{c.value}</p>
+                <p className="stat-label" style={{ fontSize: "10.5px" }}>{c.label}</p>
+                <p style={{ fontWeight: 700, fontSize: "14px", color: "var(--stone-800)" }}>{c.value}</p>
               </div>
             </div>
           ))}
