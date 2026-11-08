@@ -13,14 +13,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="h-full">
       <head />
-      <body className="h-full" style={{ background: "var(--ivory)" }}>
-        <AppProvider>
-          <ToastProvider>
-            <AppShell>
-              {children}
-            </AppShell>
-          </ToastProvider>
-        </AppProvider>
+      <body className="h-full relative min-h-screen" style={{ background: "var(--ivory)" }}>
+        {/* Subtle floral watermark background */}
+        <div
+          className="fixed inset-0 pointer-events-none z-0"
+          style={{
+            backgroundImage: "url('/bg-floral.png')",
+            backgroundRepeat: "no-repeat",
+            backgroundPosition: "right -15px bottom -15px",
+            backgroundSize: "min(460px, 70vw) auto",
+            opacity: 0.12,
+            mixBlendMode: "multiply",
+          }}
+          aria-hidden="true"
+        />
+
+        <div className="relative z-10 min-h-screen flex flex-col">
+          <AppProvider>
+            <ToastProvider>
+              <AppShell>
+                {children}
+              </AppShell>
+            </ToastProvider>
+          </AppProvider>
+        </div>
 
         <style>{`
           @media (max-width: 767px) {

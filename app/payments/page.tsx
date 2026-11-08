@@ -83,22 +83,26 @@ export default function PaymentsPage() {
       <div className="page-body">
         {/* Filters */}
         <div className="filter-bar mb-4">
-          <div style={{ position: "relative", flex: 1, maxWidth: "280px" }}>
+          <div style={{ position: "relative", flex: 1, minWidth: "200px", maxWidth: "320px" }} className="w-full sm:w-auto">
             <Search className="h-4 w-4" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--stone-400)" }} />
             <input className="form-input" style={{ paddingLeft: "34px" }} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search resident or reference…" aria-label="Search payments" />
           </div>
-          {(["all", "rent", "electricity"] as const).map(c => (
-            <button key={c} className={`btn btn-sm ${filterCat === c ? "btn-primary" : "btn-secondary"}`} onClick={() => setFilterCat(c)}>
-              {c === "all" ? "All" : c.charAt(0).toUpperCase() + c.slice(1)}
-            </button>
-          ))}
-          <select className="form-select" style={{ width: "auto" }} value={filterResident} onChange={e => setFilterResident(e.target.value)}>
-            <option value="all">All Residents</option>
-            {app.residents.map(r => <option key={r.id} value={r.id}>{r.fullName}</option>)}
-          </select>
-          <select className="form-select" style={{ width: "auto" }} value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
-            {months.map(m => <option key={m} value={m}>{m === "all" ? "All Months" : m}</option>)}
-          </select>
+          <div className="flex gap-1.5 w-full sm:w-auto">
+            {(["all", "rent", "electricity"] as const).map(c => (
+              <button key={c} className={`btn btn-sm flex-1 sm:flex-initial ${filterCat === c ? "btn-primary" : "btn-secondary"}`} onClick={() => setFilterCat(c)}>
+                {c === "all" ? "All" : c.charAt(0).toUpperCase() + c.slice(1)}
+              </button>
+            ))}
+          </div>
+          <div className="flex gap-2 w-full sm:w-auto">
+            <select className="form-select flex-1 sm:w-auto" value={filterResident} onChange={e => setFilterResident(e.target.value)}>
+              <option value="all">All Residents</option>
+              {app.residents.map(r => <option key={r.id} value={r.id}>{r.fullName}</option>)}
+            </select>
+            <select className="form-select flex-1 sm:w-auto" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
+              {months.map(m => <option key={m} value={m}>{m === "all" ? "All Months" : m}</option>)}
+            </select>
+          </div>
         </div>
 
         <div className="card">

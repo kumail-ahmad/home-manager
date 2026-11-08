@@ -66,7 +66,7 @@ function AddBillDialog({ open, onClose }: { open: boolean; onClose: () => void }
           <label className="form-label">Period Label</label>
           <input className="form-input" value={periodLabel} onChange={e => setPeriodLabel(e.target.value)} placeholder="e.g. October 2026" />
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: "10px" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
           <div className="form-group">
             <label className="form-label">Period Start</label>
             <input type="date" className="form-input" value={periodStart} onChange={e => setPeriodStart(e.target.value)} />
@@ -80,7 +80,7 @@ function AddBillDialog({ open, onClose }: { open: boolean; onClose: () => void }
             <input type="date" className="form-input" value={dueDate} onChange={e => setDueDate(e.target.value)} />
           </div>
         </div>
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "10px" }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
           <div className="form-group">
             <label className="form-label">Total Amount (₹) *</label>
             <input type="number" className={`form-input ${errors.total ? "error" : ""}`} value={totalStr} onChange={e => setTotalStr(e.target.value)} placeholder="e.g. 3200" min="1" />

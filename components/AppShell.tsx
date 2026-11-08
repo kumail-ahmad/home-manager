@@ -32,7 +32,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
   // If on a public page (/login or /), render without sidebar or offset
   if (isPublicPage) {
     return (
-      <main style={{ minHeight: "100vh", width: "100%", background: "var(--ivory)" }}>
+      <main style={{ minHeight: "100vh", width: "100%", background: "transparent" }}>
         {children}
       </main>
     );
@@ -49,7 +49,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
           justifyContent: "center",
           flexDirection: "column",
           gap: "16px",
-          background: "var(--ivory)",
+          background: "transparent",
         }}
       >
         <div className="spinner" style={{ width: "32px", height: "32px", borderWidth: "3px" }} />
@@ -62,15 +62,20 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 
   // Authenticated user on protected page: render sidebar, mobile spacer, and main offset
   return (
-    <div className="min-h-screen flex flex-col w-full bg-[var(--ivory)] text-[var(--stone-800)]">
+    <>
       <AppSidebar />
-      <div className="flex-1 flex flex-col min-w-0 w-full md:pl-[252px]">
-        {/* 56px spacer for mobile fixed topbar */}
-        <div className="h-14 md:hidden shrink-0" aria-hidden="true" />
-        <main className="flex-1 w-full min-w-0 overflow-x-hidden">
-          {children}
-        </main>
+      <div
+        style={{
+          marginLeft: "var(--sidebar-w)",
+          minHeight: "100vh",
+          display: "flex",
+          flexDirection: "column",
+        }}
+        className="main-offset"
+      >
+        <div style={{ height: "56px" }} className="mobile-spacer" aria-hidden="true" />
+        {children}
       </div>
-    </div>
+    </>
   );
 }

@@ -100,20 +100,22 @@ export default function RentPage() {
       <div className="page-body">
         {/* Filters */}
         <div className="filter-bar mb-4">
-          <div className="form-group" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
-            <label className="form-label" style={{ whiteSpace: "nowrap" }}>Month:</label>
-            <select className="form-select" style={{ width: "auto" }} value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
-              {months.map(m => <option key={m} value={m}>{m}</option>)}
-            </select>
-          </div>
-          <div className="form-group" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
-            <label className="form-label" style={{ whiteSpace: "nowrap" }}>Resident:</label>
-            <select className="form-select" style={{ width: "auto" }} value={filterResident} onChange={e => setFilterResident(e.target.value)}>
-              <option value="all">All Residents</option>
-              {app.residents.filter(r => r.status === "active").map(r =>
-                <option key={r.id} value={r.id}>{r.fullName}</option>
-              )}
-            </select>
+          <div className="flex flex-col sm:flex-row gap-2.5 w-full">
+            <div className="form-group flex-1" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
+              <label className="form-label" style={{ whiteSpace: "nowrap" }}>Month:</label>
+              <select className="form-select flex-1" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
+                {months.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div className="form-group flex-1" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
+              <label className="form-label" style={{ whiteSpace: "nowrap" }}>Resident:</label>
+              <select className="form-select flex-1" value={filterResident} onChange={e => setFilterResident(e.target.value)}>
+                <option value="all">All Residents</option>
+                {app.residents.filter(r => r.status === "active").map(r =>
+                  <option key={r.id} value={r.id}>{r.fullName}</option>
+                )}
+              </select>
+            </div>
           </div>
         </div>
 

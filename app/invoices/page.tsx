@@ -55,7 +55,7 @@ export default function InvoicesPage() {
       <div className="page-body">
         {/* Selector */}
         <div className="card mb-4">
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr auto", gap: "12px", alignItems: "flex-end" }}>
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_1fr_auto] gap-3 items-end">
             <div className="form-group">
               <label className="form-label">Resident</label>
               <select className="form-select" value={residentId} onChange={e => { setResidentId(e.target.value); setPreview(false); }}>
@@ -92,7 +92,7 @@ export default function InvoicesPage() {
               </div>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "16px", marginBottom: "20px" }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
               <div>
                 <p style={{ fontSize: "11px", fontWeight: 700, textTransform: "uppercase", color: "var(--stone-400)", marginBottom: "6px" }}>Bill To</p>
                 <p style={{ fontWeight: 600, fontSize: "15px" }}>{resident.fullName}</p>

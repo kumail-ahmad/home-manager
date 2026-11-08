@@ -164,7 +164,7 @@ export default function AppSidebar() {
 
       {/* Mobile: top bar with hamburger */}
       <div
-        className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-white border-b border-stone-200"
+        className="md:hidden fixed top-0 left-0 right-0 z-30 flex items-center justify-between px-4 py-3 bg-white/95 backdrop-blur-sm border-b border-stone-200"
         style={{ height: "56px" }}
       >
         <div className="flex items-center gap-2.5">
@@ -173,13 +173,20 @@ export default function AppSidebar() {
           </div>
           <span className="font-semibold text-sm" style={{ color: "var(--stone-800)" }}>Home Manager</span>
         </div>
-        <button
-          onClick={() => setMobileOpen(true)}
-          className="btn btn-ghost btn-icon"
-          aria-label="Open menu"
-        >
-          <Menu className="h-5 w-5" />
-        </button>
+        <div className="flex items-center gap-2">
+          {app.isLiveBackend && (
+            <span className="flex items-center gap-1 text-[10px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" /> Live
+            </span>
+          )}
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="btn btn-ghost btn-icon"
+            aria-label="Open menu"
+          >
+            <Menu className="h-5 w-5" />
+          </button>
+        </div>
       </div>
 
       {/* Mobile sidebar overlay */}
