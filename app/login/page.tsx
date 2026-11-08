@@ -1,6 +1,7 @@
+/* eslint-disable @next/next/no-location-assign-relative-destination */
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase, isSupabaseConfigured } from "@/lib/supabase";
 import { useApp, AdminUser } from "@/lib/AppContext";
@@ -23,6 +24,13 @@ export default function LoginPage() {
   const [success,   setSuccess]   = useState<string | null>(null);
 
   const configured = isSupabaseConfigured();
+
+  // If already authenticated, redirect to dashboard
+  useEffect(() => {
+    if (!app.isAuthChecking && app.currentUser) {
+      router.replace("/dashboard");
+    }
+  }, [app.isAuthChecking, app.currentUser, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -79,21 +87,22 @@ export default function LoginPage() {
         // 1. Check Primary Administrator credentials (admin / kumail12)
         const isAdminUser = (
           normUser === "admin" ||
-          normUser === "admin@home.com"
+          normUser === "admin@home.com" ||
+          normUser === "admin@floralhome.com"
         );
         if (isAdminUser) {
           if (password === "kumail12") {
             const adminUser: AdminUser = {
               id: "6ab75d02-4565-41b1-96f8-003b4481228d",
               email: "admin",
-              fullName: "Administrator",
+              fullName: "admin",
               role: "super_admin",
               status: "approved",
               approvedBy: "system",
               createdAt: new Date().toISOString(),
             };
             app.setCurrentUser(adminUser);
-            router.push("/dashboard");
+            window.location.href = "/dashboard";
             return;
           } else {
             setError("Invalid password for admin.");
@@ -102,28 +111,28 @@ export default function LoginPage() {
           }
         }
 
-        // 2. Check Co-Administrator / User credentials (user / rameezahmad)
+        // 2. Check Co-Administrator / User credentials (rameez / rameez12)
         const isNormalUser = (
+          normUser === "rameez" ||
           normUser === "user" ||
-          normUser === "user@home.com" ||
-          normUser === "rameez"
+          normUser === "rameez@home.com"
         );
         if (isNormalUser) {
-          if (password === "rameezahmad") {
-            const fullControlUser: AdminUser = {
+          if (password === "rameez12") {
+            const regularUser: AdminUser = {
               id: "c8d90f12-bc23-4811-a95b-f9148eede78f",
-              email: "user",
-              fullName: "Rameez Ahmad",
-              role: "admin",
+              email: "rameez",
+              fullName: "user",
+              role: "user",
               status: "approved",
               approvedBy: "admin",
               createdAt: new Date().toISOString(),
             };
-            app.setCurrentUser(fullControlUser);
-            router.push("/dashboard");
+            app.setCurrentUser(regularUser);
+            window.location.href = "/dashboard";
             return;
           } else {
-            setError("Invalid password for user.");
+            setError("Invalid password for user rameez.");
             setLoading(false);
             return;
           }
@@ -159,8 +168,14 @@ export default function LoginPage() {
             return;
           }
 
-          app.setCurrentUser(admin);
-          router.push("/dashboard");
+          const isRealAdmin = normUser === "admin" || normUser === "admin@home.com" || normUser === "admin@floralhome.com";
+          app.setCurrentUser({
+            ...admin,
+            fullName: isRealAdmin ? "admin" : "user",
+            role: isRealAdmin ? "super_admin" : "user",
+          });
+          window.location.href = "/dashboard";
+          return;
         } else {
           setError("Invalid username or password.");
           setLoading(false);
@@ -290,8 +305,11 @@ export default function LoginPage() {
                 className="form-input"
                 value={username}
                 onChange={e => setUsername(e.target.value)}
-                placeholder="admin or user"
+                placeholder="admin or rameez"
                 required
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 autoComplete="username"
               />
             </div>
@@ -306,6 +324,9 @@ export default function LoginPage() {
                 onChange={e => setPassword(e.target.value)}
                 placeholder="••••••••"
                 required
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
                 autoComplete={isSignUp ? "new-password" : "current-password"}
               />
             </div>

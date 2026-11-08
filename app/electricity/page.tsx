@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Zap, CreditCard } from "lucide-react";
+import { useState, useMemo } from "react";
+import { Plus, Zap, CreditCard, Search, Filter, RotateCcw } from "lucide-react";
 import { useApp, formatRupee, formatDate, currentMonthLabel } from "@/lib/AppContext";
 import { useToast } from "@/components/ToastProvider";
 import Dialog from "@/components/Dialog";
@@ -119,10 +119,29 @@ export default function ElectricityPage() {
   const [showBill,    setShowBill]    = useState(false);
   const [showPayment, setShowPayment] = useState(false);
   const [payResidentId, setPayResidentId] = useState<string | undefined>();
+  const [billSearch, setBillSearch] = useState("");
+  const [billFilterStatus, setBillFilterStatus] = useState<"all" | "paid" | "unpaid" | "partial">("all");
+  const [residentSearch, setResidentSearch] = useState("");
 
   const totalBilled = app.electricityAllocations.reduce((s, a) => s + a.sharePaise, 0);
   const totalPaid   = app.electricityPayments.reduce((s, p) => s + p.amountPaise, 0);
   const outstanding = Math.max(0, totalBilled - totalPaid);
+
+  const filteredBills = useMemo(() => {
+    return app.electricityBills.filter(bill => {
+      const q = billSearch.toLowerCase().trim();
+      const matchesSearch = !q || bill.periodLabel.toLowerCase().includes(q);
+
+      const allocs = app.electricityAllocations.filter(a => a.billId === bill.id);
+      const paid = allocs.reduce((s, a) => {
+        return s + app.electricityPayments.filter(p => p.allocationId === a.id).reduce((x, p) => x + p.amountPaise, 0);
+      }, 0);
+      const status = paid >= bill.totalAmountPaise ? "paid" : paid > 0 ? "partial" : "unpaid";
+      const matchesStatus = billFilterStatus === "all" || billFilterStatus === status;
+
+      return matchesSearch && matchesStatus;
+    });
+  }, [app.electricityBills, app.electricityAllocations, app.electricityPayments, billSearch, billFilterStatus]);
 
   const handlePayment = (data: PaymentFormData) => {
     const paise = Math.round(Number(data.amountStr) * 100);
@@ -171,8 +190,48 @@ export default function ElectricityPage() {
 
         {/* Bills table */}
         <div className="card mb-4">
-          <div className="card-header">
-            <h2 style={{ fontSize: "14px", fontWeight: 600 }}>Electricity Bills</h2>
+          <div className="card-header flex flex-wrap gap-2 items-center justify-between">
+            <h2 style={{ fontSize: "14px", fontWeight: 600 }}>Electricity Bills ({filteredBills.length})</h2>
+
+            {/* Filter controls */}
+            {app.electricityBills.length > 0 && (
+              <div className="flex flex-wrap gap-2 items-center text-xs">
+                <div className="relative">
+                  <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                  <input
+                    type="search"
+                    className="form-input text-xs py-1 pl-7 pr-2 w-36 sm:w-44"
+                    placeholder="Search period…"
+                    value={billSearch}
+                    onChange={e => setBillSearch(e.target.value)}
+                  />
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Filter className="h-3 w-3 text-stone-400" />
+                  <select
+                    className="form-select text-xs py-1 px-2"
+                    value={billFilterStatus}
+                    onChange={e => setBillFilterStatus(e.target.value as typeof billFilterStatus)}
+                  >
+                    <option value="all">All Status</option>
+                    <option value="paid">Paid</option>
+                    <option value="partial">Partial</option>
+                    <option value="unpaid">Unpaid</option>
+                  </select>
+                </div>
+
+                {(billSearch || billFilterStatus !== "all") && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm text-xs py-1 px-2"
+                    onClick={() => { setBillSearch(""); setBillFilterStatus("all"); }}
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           {app.electricityBills.length === 0 ? (
             <div className="empty-state">
@@ -183,6 +242,18 @@ export default function ElectricityPage() {
                 <Plus className="h-3.5 w-3.5" /> Add Bill
               </button>
             </div>
+          ) : filteredBills.length === 0 ? (
+            <div className="empty-state py-6">
+              <Filter style={{ width: 28, height: 28 }} />
+              <h3>No bills match your filter</h3>
+              <p>Try clearing your search or status filter.</p>
+              <button
+                className="btn btn-secondary btn-sm mt-2"
+                onClick={() => { setBillSearch(""); setBillFilterStatus("all"); }}
+              >
+                Reset Filter
+              </button>
+            </div>
           ) : (
             <div className="overflow-table-wrap">
               <table className="data-table">
@@ -190,7 +261,7 @@ export default function ElectricityPage() {
                   <tr><th>Period</th><th>Total Amount</th><th>Residents</th><th>Method</th><th>Due</th><th>Status</th></tr>
                 </thead>
                 <tbody>
-                  {app.electricityBills.map(bill => {
+                  {filteredBills.map(bill => {
                     const allocs = app.electricityAllocations.filter(a => a.billId === bill.id);
                     const paid   = allocs.reduce((s, a) => {
                       return s + app.electricityPayments.filter(p => p.allocationId === a.id).reduce((x, p) => x + p.amountPaise, 0);
@@ -220,8 +291,18 @@ export default function ElectricityPage() {
         {/* Resident-wise allocation table */}
         {app.electricityAllocations.length > 0 && (
           <div className="card">
-            <div className="card-header">
+            <div className="card-header flex flex-wrap gap-2 items-center justify-between">
               <h2 style={{ fontSize: "14px", fontWeight: 600 }}>Resident-wise Balances</h2>
+              <div className="relative">
+                <Search className="h-3.5 w-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                <input
+                  type="search"
+                  className="form-input text-xs py-1 pl-7 pr-2 w-36 sm:w-44"
+                  placeholder="Search resident…"
+                  value={residentSearch}
+                  onChange={e => setResidentSearch(e.target.value)}
+                />
+              </div>
             </div>
             <div className="overflow-table-wrap">
               <table className="data-table">
@@ -229,9 +310,12 @@ export default function ElectricityPage() {
                   <tr><th>Resident</th><th>Billed</th><th>Paid</th><th>Outstanding</th><th></th></tr>
                 </thead>
                 <tbody>
-                  {app.residents.filter(r => r.status === "active").map(r => {
-                    const bal = app.getResidentElectricityBalance(r.id);
-                    if (bal.totalBilled === 0) return null;
+                  {app.residents
+                    .filter(r => r.status === "active")
+                    .filter(r => !residentSearch || r.fullName.toLowerCase().includes(residentSearch.toLowerCase()))
+                    .map(r => {
+                      const bal = app.getResidentElectricityBalance(r.id);
+                      if (bal.totalBilled === 0) return null;
                     return (
                       <tr key={r.id}>
                         <td style={{ fontWeight: 500 }}>{r.fullName}</td>

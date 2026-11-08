@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import {
   Users, BedDouble, CreditCard, AlertCircle, Zap,
-  TrendingUp, Plus, ClipboardList, RefreshCw
+  TrendingUp, Plus, ClipboardList, RefreshCw, Trash2
 } from "lucide-react";
 import { useApp, formatRupee, formatDateTime, currentMonthKey, rupeeToInt } from "@/lib/AppContext";
 import ResidentFormDialog from "@/components/ResidentFormDialog";
@@ -185,8 +185,24 @@ export default function DashboardPage() {
               <div style={{ display: "flex", alignItems: "center", gap: "7px" }}>
                 <ClipboardList className="h-4 w-4" style={{ color: "var(--stone-400)" }} />
                 <h2 style={{ fontSize: "14px", fontWeight: 600 }}>Recent Activity</h2>
+                {app.isAdmin && (
+                  <span className="badge badge-amber text-[10px] ml-1 py-0 px-1.5 font-semibold">
+                    Admin
+                  </span>
+                )}
               </div>
-              <Link href="/activity" className="btn btn-ghost btn-sm" style={{ fontSize: "12px" }}>View all</Link>
+              <div className="flex items-center gap-2">
+                {app.isAdmin && (
+                  <Link
+                    href="/activity"
+                    className="btn btn-secondary btn-sm text-[11px] text-red-600 border-red-200 hover:bg-red-50 py-1 px-2 flex items-center gap-1"
+                    title="Clear logs (Admin Only)"
+                  >
+                    <Trash2 className="h-3 w-3" /> Clear
+                  </Link>
+                )}
+                <Link href="/activity" className="btn btn-ghost btn-sm" style={{ fontSize: "12px" }}>View all</Link>
+              </div>
             </div>
 
             {recentActivity.length === 0 ? (
@@ -229,14 +245,19 @@ export default function DashboardPage() {
               <div className="card-header">
                 <h2 style={{ fontSize: "14px", fontWeight: 600 }}>Quick Actions</h2>
               </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+              <div style={{ display: "flex", flexDirection: "column", gap: "9px" }}>
                 {[
-                  { label: "+ Add Resident",    fn: () => setShowAddResident(true), cls: "btn-primary" },
-                  { label: "₹ Record Payment",  fn: () => setShowPayment(true),     cls: "btn-sage" },
-                  { label: "⚡ Log Meter Reading", fn: () => setShowMeter(true),     cls: "btn-secondary" },
+                  { label: "Add Resident", icon: Plus, fn: () => setShowAddResident(true), cls: "btn-primary" },
+                  { label: "Record Payment", icon: CreditCard, fn: () => setShowPayment(true), cls: "btn-sage" },
+                  { label: "Log Meter Reading", icon: Zap, fn: () => setShowMeter(true), cls: "btn-secondary" },
                 ].map(a => (
-                  <button key={a.label} className={`btn ${a.cls}`} style={{ justifyContent: "flex-start" }} onClick={a.fn}>
-                    {a.label}
+                  <button
+                    key={a.label}
+                    className={`btn ${a.cls} w-full py-3 sm:py-2.5 px-4 text-[14px] sm:text-[13.5px] font-semibold justify-start gap-3 rounded-xl min-h-[46px] shadow-sm`}
+                    onClick={a.fn}
+                  >
+                    <a.icon className="h-4 w-4 shrink-0" />
+                    <span>{a.label}</span>
                   </button>
                 ))}
                 <div className="divider" />

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useSyncExternalStore } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import AppSidebar from "@/components/Sidebar";
 import { useApp } from "@/lib/AppContext";
 
@@ -9,7 +9,6 @@ const emptySubscribe = () => () => {};
 
 export default function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const router = useRouter();
   const { currentUser, isAuthChecking } = useApp();
 
   const isMounted = useSyncExternalStore(
@@ -18,18 +17,18 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
     () => false
   );
 
-  const isPublicPage = pathname === "/" || pathname === "/login";
+  const isPublicPage = pathname === "/login";
 
-  // Route protection
+  // Immediate hard redirect for unauthenticated access to protected routes
   useEffect(() => {
     if (!isMounted || isAuthChecking) return;
 
     if (!isPublicPage && !currentUser) {
-      router.replace("/login");
+      window.location.replace("/login");
     }
-  }, [isMounted, isAuthChecking, isPublicPage, currentUser, router]);
+  }, [isMounted, isAuthChecking, isPublicPage, currentUser]);
 
-  // If on a public page (/login or /), render without sidebar or offset
+  // If on login page, render without sidebar
   if (isPublicPage) {
     return (
       <main style={{ minHeight: "100vh", width: "100%", background: "transparent" }}>

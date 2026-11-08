@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Receipt, Search, Plus } from "lucide-react";
+import { Receipt, Search, Plus, Filter, ArrowUpDown, RotateCcw } from "lucide-react";
 import { useApp, formatRupee, formatDateTime } from "@/lib/AppContext";
 import PaymentDialog from "@/components/PaymentDialog";
 import Dialog from "@/components/Dialog";
@@ -19,6 +19,8 @@ export default function PaymentsPage() {
   const [filterCat,      setFilterCat]      = useState<"all" | "rent" | "electricity">("all");
   const [filterResident, setFilterResident] = useState("all");
   const [filterMonth,    setFilterMonth]    = useState("all");
+  const [filterMethod,   setFilterMethod]   = useState("all");
+  const [sortBy,         setSortBy]         = useState<"newest" | "oldest" | "amount-desc" | "amount-asc">("newest");
 
   const months = useMemo(() => {
     const set = new Set<string>();
@@ -41,11 +43,19 @@ export default function PaymentsPage() {
       .filter(p => filterCat === "all" || p.type === filterCat)
       .filter(p => filterResident === "all" || p.residentId === filterResident)
       .filter(p => filterMonth === "all" || p.date.startsWith(filterMonth))
-      .filter(p => !search || app.residents.find(r => r.id === p.residentId)?.fullName.toLowerCase().includes(search.toLowerCase()) || p.reference.toLowerCase().includes(search.toLowerCase()))
-      .sort((a, b) => b.date.localeCompare(a.date));
-  }, [app.rentPayments, app.electricityPayments, app.residents, filterCat, filterResident, filterMonth, search]);
+      .filter(p => filterMethod === "all" || p.method === filterMethod)
+      .filter(p => !search || app.residents.find(r => r.id === p.residentId)?.fullName.toLowerCase().includes(search.toLowerCase()) || p.reference.toLowerCase().includes(search.toLowerCase()) || (p.notes && p.notes.toLowerCase().includes(search.toLowerCase())))
+      .sort((a, b) => {
+        if (sortBy === "newest") return b.date.localeCompare(a.date);
+        if (sortBy === "oldest") return a.date.localeCompare(b.date);
+        if (sortBy === "amount-desc") return b.amount - a.amount;
+        if (sortBy === "amount-asc") return a.amount - b.amount;
+        return 0;
+      });
+  }, [app.rentPayments, app.electricityPayments, app.residents, filterCat, filterResident, filterMonth, filterMethod, search, sortBy]);
 
   const totalShown = combined.filter(p => !p.voidedAt).reduce((s, p) => s + p.amount, 0);
+  const hasActiveFilters = search || filterCat !== "all" || filterResident !== "all" || filterMonth !== "all" || filterMethod !== "all" || sortBy !== "newest";
 
   const methodBadge = (m: string) => {
     const map: Record<string, string> = { cash: "badge-stone", upi: "badge-blue", bank_transfer: "badge-green", cheque: "badge-amber", other: "badge-stone" };
@@ -82,26 +92,107 @@ export default function PaymentsPage() {
 
       <div className="page-body">
         {/* Filters */}
-        <div className="filter-bar mb-4">
-          <div style={{ position: "relative", flex: 1, minWidth: "200px", maxWidth: "320px" }} className="w-full sm:w-auto">
-            <Search className="h-4 w-4" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--stone-400)" }} />
-            <input className="form-input" style={{ paddingLeft: "34px" }} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search resident or reference…" aria-label="Search payments" />
-          </div>
-          <div className="flex gap-1.5 w-full sm:w-auto">
-            {(["all", "rent", "electricity"] as const).map(c => (
-              <button key={c} className={`btn btn-sm flex-1 sm:flex-initial ${filterCat === c ? "btn-primary" : "btn-secondary"}`} onClick={() => setFilterCat(c)}>
-                {c === "all" ? "All" : c.charAt(0).toUpperCase() + c.slice(1)}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <select className="form-select flex-1 sm:w-auto" value={filterResident} onChange={e => setFilterResident(e.target.value)}>
-              <option value="all">All Residents</option>
-              {app.residents.map(r => <option key={r.id} value={r.id}>{r.fullName}</option>)}
-            </select>
-            <select className="form-select flex-1 sm:w-auto" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
-              {months.map(m => <option key={m} value={m}>{m === "all" ? "All Months" : m}</option>)}
-            </select>
+        <div className="card mb-4">
+          <div className="flex flex-col gap-3">
+            <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                <input
+                  className="form-input w-full"
+                  style={{ paddingLeft: "34px" }}
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search resident, notes, reference…"
+                  aria-label="Search payments"
+                />
+              </div>
+
+              <div className="flex gap-1.5 w-full sm:w-auto">
+                {(["all", "rent", "electricity"] as const).map(c => (
+                  <button
+                    key={c}
+                    type="button"
+                    className={`btn btn-sm flex-1 sm:flex-initial ${filterCat === c ? "btn-primary" : "btn-secondary"}`}
+                    onClick={() => setFilterCat(c)}
+                  >
+                    {c === "all" ? "All" : c.charAt(0).toUpperCase() + c.slice(1)}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2 items-center justify-between pt-2.5 border-t border-stone-100 text-xs">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-1.5 text-stone-500 font-medium">
+                  <Filter className="h-3.5 w-3.5 text-stone-400" />
+                  <span>Filters:</span>
+                </div>
+
+                <select
+                  className="form-select flex-1 sm:w-auto text-xs py-1 px-2.5"
+                  value={filterResident}
+                  onChange={e => setFilterResident(e.target.value)}
+                >
+                  <option value="all">All Residents</option>
+                  {app.residents.map(r => <option key={r.id} value={r.id}>{r.fullName}</option>)}
+                </select>
+
+                <select
+                  className="form-select flex-1 sm:w-auto text-xs py-1 px-2.5"
+                  value={filterMonth}
+                  onChange={e => setFilterMonth(e.target.value)}
+                >
+                  {months.map(m => <option key={m} value={m}>{m === "all" ? "All Months" : m}</option>)}
+                </select>
+
+                <select
+                  className="form-select flex-1 sm:w-auto text-xs py-1 px-2.5"
+                  value={filterMethod}
+                  onChange={e => setFilterMethod(e.target.value)}
+                >
+                  <option value="all">All Methods</option>
+                  <option value="upi">UPI</option>
+                  <option value="cash">Cash</option>
+                  <option value="bank_transfer">Bank Transfer</option>
+                  <option value="cheque">Cheque</option>
+                </select>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                <div className="flex items-center gap-1.5 text-stone-500 font-medium">
+                  <ArrowUpDown className="h-3.5 w-3.5 text-stone-400" />
+                  <span>Sort:</span>
+                </div>
+
+                <select
+                  className="form-select flex-1 sm:w-auto text-xs py-1 px-2.5 font-medium"
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value as typeof sortBy)}
+                >
+                  <option value="newest">Newest Date</option>
+                  <option value="oldest">Oldest Date</option>
+                  <option value="amount-desc">Highest Amount</option>
+                  <option value="amount-asc">Lowest Amount</option>
+                </select>
+
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm text-xs py-1 px-2.5 text-stone-600 hover:text-stone-900"
+                    onClick={() => {
+                      setSearch("");
+                      setFilterCat("all");
+                      setFilterResident("all");
+                      setFilterMonth("all");
+                      setFilterMethod("all");
+                      setSortBy("newest");
+                    }}
+                  >
+                    <RotateCcw className="h-3 w-3" /> Reset
+                  </button>
+                )}
+              </div>
+            </div>
           </div>
         </div>
 

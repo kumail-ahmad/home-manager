@@ -107,7 +107,6 @@ export interface ActivityLog {
 const residents: Resident[] = [];
 const rooms: Room[] = [
   { id: "room-1", roomNumber: "101", capacity: 3, residentIds: [], notes: "North wing" },
-  { id: "room-2", roomNumber: "102", capacity: 3, residentIds: [], notes: "North wing" },
   { id: "room-3", roomNumber: "201", capacity: 4, residentIds: [], notes: "Garden-facing" },
   { id: "room-4", roomNumber: "202", capacity: 4, residentIds: [], notes: "Garden-facing" },
   { id: "room-5", roomNumber: "301", capacity: 4, residentIds: [], notes: "Quiet floor" },

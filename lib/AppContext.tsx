@@ -6,7 +6,7 @@
  * while maintaining instantaneous UI responsiveness and fallback storage.
  */
 
-import React, { createContext, useCallback, useContext, useEffect, useState } from "react";
+import React, { createContext, useCallback, useContext, useEffect, useState, useMemo } from "react";
 import * as store from "@/lib/mockStore";
 import { isSupabaseConfigured, supabase } from "@/lib/supabase";
 import {
@@ -16,6 +16,8 @@ import {
   approveAdminInSupabase,
   rejectAdminInSupabase,
   deleteAdminInSupabase,
+  clearActivityLogsInSupabase,
+  logActivityToSupabase,
   addResidentToSupabase,
   updateResidentInSupabase,
   addRoomToSupabase,
@@ -62,7 +64,7 @@ const DEFAULT_INITIAL_ADMINS: AdminUser[] = [
   {
     id: "admin-1",
     email: "admin",
-    fullName: "Administrator",
+    fullName: "admin",
     role: "super_admin",
     status: "approved",
     approvedBy: "system",
@@ -71,9 +73,9 @@ const DEFAULT_INITIAL_ADMINS: AdminUser[] = [
   },
   {
     id: "admin-2",
-    email: "user",
-    fullName: "Rameez Ahmad",
-    role: "admin",
+    email: "rameez",
+    fullName: "user",
+    role: "user",
     status: "approved",
     approvedBy: "admin",
     approvedAt: "2025-01-01T00:00:00.000Z",
@@ -110,6 +112,7 @@ export interface DashboardStats {
 
 interface AppContextValue extends AppState {
   currentUser: AdminUser | null;
+  isAdmin: boolean;
   isAuthChecking: boolean;
   setCurrentUser: (user: AdminUser | null) => void;
   logout: () => Promise<void>;
@@ -117,6 +120,7 @@ interface AppContextValue extends AppState {
   rejectAdmin: (adminId: string) => Promise<void>;
   deleteAdmin: (adminId: string) => Promise<void>;
   registerLocalAdmin: (email: string, fullName: string) => AdminUser;
+  clearActivityLogs: (options: { mode: "all" } | { mode: "before"; timestamp: string } | { mode: "range"; start: string; end: string }) => Promise<number>;
   isLiveBackend: boolean;
   isLoadingBackend: boolean;
   refreshBackend: () => Promise<void>;
@@ -167,39 +171,64 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLiveBackend, setIsLiveBackend] = useState<boolean>(false);
   const [isLoadingBackend, setIsLoadingBackend] = useState<boolean>(false);
 
-  // Initialize Auth state from localStorage or Supabase
+  // Initialize Auth state from session cookie, localStorage or Supabase
   useEffect(() => {
     let unmounted = false;
 
     const initAuth = async () => {
       try {
-        if (isSupabaseConfigured()) {
+        // 1. Check for active floral_session cookie
+        const hasSessionCookie = typeof document !== "undefined" && /(?:^|;\s*)floral_session=([^;]+)/.test(document.cookie);
+
+        // 2. Restore active user session from localStorage or sessionStorage
+        const savedUser = typeof window !== "undefined"
+          ? (localStorage.getItem("floral_admin_user") || sessionStorage.getItem("floral_admin_user"))
+          : null;
+
+        if (savedUser && hasSessionCookie && !unmounted) {
+          try {
+            const parsed = JSON.parse(savedUser);
+            if (parsed && (parsed.email === "admin" || parsed.email === "rameez" || parsed.email === "user")) {
+              setCurrentUser(parsed);
+              setIsAuthChecking(false);
+              return;
+            }
+          } catch {
+            localStorage.removeItem("floral_admin_user");
+            sessionStorage.removeItem("floral_admin_user");
+          }
+        }
+
+        // Clean up stale storage if no cookie is found
+        if (!hasSessionCookie && typeof window !== "undefined") {
+          localStorage.removeItem("floral_admin_user");
+          sessionStorage.removeItem("floral_admin_user");
+        }
+
+        // 3. Supabase fallback verification
+        if (isSupabaseConfigured() && hasSessionCookie) {
           const { data: { session } } = await supabase.auth.getSession();
           if (session?.user?.email) {
             const admin = await checkAdminStatusInSupabase(session.user.email);
-            if (!unmounted) {
-              if (admin && admin.status === "approved") {
-                setCurrentUser(admin);
-              } else {
-                // Not approved, sign out
-                await supabase.auth.signOut();
-                setCurrentUser(null);
-              }
-            }
-          }
-        } else {
-          // Check local session storage for offline administrator session
-          const savedUser = sessionStorage.getItem("floral_admin_user");
-          if (savedUser && !unmounted) {
-            try {
-              setCurrentUser(JSON.parse(savedUser));
-            } catch {
-              sessionStorage.removeItem("floral_admin_user");
+            if (!unmounted && admin && admin.status === "approved") {
+              const isRealAdmin = session.user.email === "admin" || session.user.email === "admin@home.com" || session.user.email === "admin@floralhome.com";
+              setCurrentUser({
+                ...admin,
+                fullName: isRealAdmin ? "admin" : "user",
+                role: isRealAdmin ? "super_admin" : "user",
+              });
+              setIsAuthChecking(false);
+              return;
             }
           }
         }
+
+        if (!unmounted) {
+          setCurrentUser(null);
+        }
       } catch (err) {
         console.error("Auth init error:", err);
+        if (!unmounted) setCurrentUser(null);
       } finally {
         if (!unmounted) {
           setIsAuthChecking(false);
@@ -214,23 +243,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     };
   }, []);
 
-  // Sync currentUser with sessionStorage when in local fallback mode
+  // Sync currentUser with localStorage, sessionStorage & simple cross-browser cookie
   const handleSetCurrentUser = useCallback((user: AdminUser | null) => {
     setCurrentUser(user);
     if (typeof window !== "undefined") {
       if (user) {
+        localStorage.setItem("floral_admin_user", JSON.stringify(user));
         sessionStorage.setItem("floral_admin_user", JSON.stringify(user));
+        // Clean alphanumeric cookie value — works reliably on mobile Safari & Chrome
+        document.cookie = `floral_session=${encodeURIComponent(user.email)}; path=/; max-age=604800; SameSite=Lax`;
       } else {
+        localStorage.removeItem("floral_admin_user");
         sessionStorage.removeItem("floral_admin_user");
+        document.cookie = "floral_session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax";
       }
     }
   }, []);
 
+  const isAdmin = useMemo(() => {
+    if (!currentUser) return false;
+    const email = currentUser.email?.toLowerCase().trim();
+    const role = currentUser.role?.toLowerCase().trim();
+    return email === "admin" || email === "admin@home.com" || email === "admin@floralhome.com" || role === "super_admin";
+  }, [currentUser]);
+
   const logout = useCallback(async () => {
     if (isSupabaseConfigured()) {
-      await supabase.auth.signOut();
+      try {
+        await supabase.auth.signOut();
+      } catch (e) {
+        console.error("Supabase signOut error:", e);
+      }
     }
     handleSetCurrentUser(null);
+    if (typeof window !== "undefined") {
+      localStorage.clear();
+      sessionStorage.clear();
+      document.cookie = "floral_session=; path=/; max-age=0; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/; SameSite=Lax";
+      window.location.replace("/login");
+    }
   }, [handleSetCurrentUser]);
 
   // Load from Supabase if configured
@@ -850,6 +901,65 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return reading;
   }, [isLiveBackend]);
 
+  const clearActivityLogs = useCallback(async (
+    options: { mode: "all" } | { mode: "before"; timestamp: string } | { mode: "range"; start: string; end: string }
+  ): Promise<number> => {
+    if (!isAdmin) {
+      throw new Error("Unauthorized: Only the admin can clear activity logs.");
+    }
+
+    let removedCount = 0;
+    const prevLogs = state.activityLog;
+    let remainingLogs: ActivityLog[] = [];
+
+    if (options.mode === "all") {
+      removedCount = prevLogs.length;
+      remainingLogs = [];
+    } else if (options.mode === "before") {
+      const cutoff = new Date(options.timestamp).getTime();
+      remainingLogs = prevLogs.filter(l => new Date(l.timestamp).getTime() > cutoff);
+      removedCount = prevLogs.length - remainingLogs.length;
+    } else if (options.mode === "range") {
+      const startT = new Date(options.start).getTime();
+      const endT = new Date(options.end).getTime();
+      remainingLogs = prevLogs.filter(l => {
+        const t = new Date(l.timestamp).getTime();
+        return t < startT || t > endT;
+      });
+      removedCount = prevLogs.length - remainingLogs.length;
+    }
+
+    if (isLiveBackend) {
+      try {
+        await clearActivityLogsInSupabase(options);
+      } catch (err) {
+        console.error("Supabase log deletion error:", err);
+      }
+    }
+
+    const clearedLog: ActivityLog = {
+      id: generateUUID(),
+      timestamp: new Date().toISOString(),
+      action: "Cleared",
+      entityType: "System Audit",
+      entityLabel: "Activity Logs",
+      details: options.mode === "all"
+        ? `Admin cleared all activity logs (${removedCount} records)`
+        : options.mode === "before"
+        ? `Admin cleared logs before ${new Date(options.timestamp).toLocaleString("en-IN")} (${removedCount} records)`
+        : `Admin cleared logs from ${new Date(options.start).toLocaleString("en-IN")} to ${new Date(options.end).toLocaleString("en-IN")} (${removedCount} records)`,
+    };
+
+    const finalLogs = [clearedLog, ...remainingLogs];
+    setState(prev => ({ ...prev, activityLog: finalLogs }));
+
+    if (isLiveBackend) {
+      await logActivityToSupabase(clearedLog.action, clearedLog.entityType, clearedLog.entityLabel, clearedLog.details);
+    }
+
+    return removedCount;
+  }, [isAdmin, state.activityLog, isLiveBackend]);
+
   const dashboardStats = getDashboardStatsForMonth();
 
   return (
@@ -857,6 +967,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       value={{
         ...state,
         currentUser,
+        isAdmin,
         isAuthChecking,
         setCurrentUser: handleSetCurrentUser,
         logout,
@@ -864,6 +975,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         rejectAdmin,
         deleteAdmin,
         registerLocalAdmin,
+        clearActivityLogs,
         isLiveBackend,
         isLoadingBackend,
         refreshBackend: loadSupabaseData,

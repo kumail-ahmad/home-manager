@@ -89,13 +89,15 @@ export default function SettingsPage() {
           <h1 className="page-title">Settings</h1>
           <p className="page-desc">System configuration, administrator approvals, and workspace preferences</p>
         </div>
-        <button
-          onClick={handleSignOut}
-          className="btn btn-secondary"
-          style={{ display: "flex", alignItems: "center", gap: "6px" }}
-        >
-          <LogOut className="h-4 w-4" /> Sign Out
-        </button>
+        <div className="w-full sm:w-auto">
+          <button
+            onClick={handleSignOut}
+            className="btn btn-secondary w-full sm:w-auto justify-center"
+            style={{ display: "flex", alignItems: "center", gap: "6px" }}
+          >
+            <LogOut className="h-4 w-4" /> Sign Out
+          </button>
+        </div>
       </div>
 
       <div className="page-body">
@@ -103,17 +105,18 @@ export default function SettingsPage() {
           {/* Administrator Approvals & Access Control */}
           <section className="card" style={{ gridColumn: "1 / -1" }}>
             <div className="settings-heading">
-              <div className="icon-tile blush">
+              <div className="icon-tile blush flex-shrink-0">
                 <Shield className="h-5 w-5" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <h2>Administrator Accounts & Access Control</h2>
                 <p>New user registrations require administrator approval before gaining access</p>
               </div>
             </div>
             <div className="divider" />
 
-            <div style={{ overflowX: "auto" }}>
+            {/* Desktop Table View */}
+            <div className="hidden sm:block overflow-x-auto">
               <table className="table" style={{ width: "100%", fontSize: "13px" }}>
                 <thead>
                   <tr style={{ textAlign: "left", color: "var(--stone-500)", borderBottom: "1px solid var(--stone-200)" }}>
@@ -191,24 +194,90 @@ export default function SettingsPage() {
                 </tbody>
               </table>
             </div>
+
+            {/* Mobile Cards View (Straight cards one by one) */}
+            <div className="sm:hidden flex flex-col gap-3">
+              {app.admins.length === 0 ? (
+                <div className="text-center py-6 text-stone-400 text-xs">
+                  No administrator accounts found.
+                </div>
+              ) : (
+                app.admins.map(admin => (
+                  <div
+                    key={admin.id}
+                    className="p-3.5 rounded-xl border border-stone-200 bg-stone-50/60 flex flex-col gap-2.5"
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <strong className="block text-sm text-stone-800 font-semibold truncate">
+                          {admin.fullName}
+                        </strong>
+                        <span className="block text-xs text-stone-500 break-all">
+                          {admin.email}
+                        </span>
+                      </div>
+                      <div className="flex-shrink-0">
+                        {admin.status === "approved" && (
+                          <span className="badge badge-green text-[11px]">
+                            <Check className="h-3 w-3" /> Approved
+                          </span>
+                        )}
+                        {admin.status === "pending" && (
+                          <span className="badge badge-amber text-[11px]">
+                            <AlertCircle className="h-3 w-3" /> Pending
+                          </span>
+                        )}
+                        {admin.status === "rejected" && (
+                          <span className="badge badge-red text-[11px]">
+                            Rejected
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs text-stone-500 pt-2 border-t border-stone-200/60">
+                      <span>Role: <span className="font-medium text-stone-700 capitalize">{admin.role.replace("_", " ")}</span></span>
+                      <span className="text-[11px] text-stone-400">{admin.approvedBy ? `By ${admin.approvedBy}` : "Awaiting review"}</span>
+                    </div>
+
+                    {admin.status === "pending" && (
+                      <div className="grid grid-cols-2 gap-2 pt-1">
+                        <button
+                          className="btn btn-primary btn-sm justify-center text-xs py-1.5"
+                          onClick={() => handleApprove(admin.id, admin.email)}
+                        >
+                          <UserCheck className="h-3.5 w-3.5" /> Approve
+                        </button>
+                        <button
+                          className="btn btn-secondary btn-sm justify-center text-xs py-1.5 text-red-600 border-red-200 hover:bg-red-50"
+                          onClick={() => handleReject(admin.id, admin.email)}
+                        >
+                          <UserX className="h-3.5 w-3.5" /> Reject
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
           </section>
 
           {/* Database Connectivity Card */}
           <section className="card" style={{ gridColumn: "1 / -1" }}>
             <div className="settings-heading">
-              <div className="icon-tile sage">
+              <div className="icon-tile sage flex-shrink-0">
                 <Database className="h-5 w-5" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <h2>Backend & Database Status</h2>
                 <p>PostgreSQL Cloud Database powered by Supabase</p>
               </div>
             </div>
             <div className="divider" />
 
-            <div style={{ display: "flex", flexWrap: "wrap", gap: "16px", marginBottom: "20px" }}>
-              <div style={{ flex: 1, minWidth: "240px", background: "var(--stone-50)", padding: "16px", borderRadius: "10px", border: "1px solid var(--stone-200)" }}>
-                <span style={{ fontSize: "12px", color: "var(--stone-500)", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>Backend Mode</span>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+              <div style={{ background: "var(--stone-50)", padding: "14px", borderRadius: "10px", border: "1px solid var(--stone-200)" }}>
+                <span style={{ fontSize: "11px", color: "var(--stone-500)", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>Backend Mode</span>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "6px" }}>
                   <span
                     style={{
@@ -217,16 +286,17 @@ export default function SettingsPage() {
                       height: "10px",
                       borderRadius: "50%",
                       background: app.isLiveBackend ? "#22c55e" : "#f59e0b",
+                      flexShrink: 0,
                     }}
                   />
-                  <strong style={{ fontSize: "15px", color: "var(--stone-800)" }}>
+                  <strong style={{ fontSize: "14px", color: "var(--stone-800)", wordBreak: "break-word" }}>
                     {app.isLiveBackend ? "Connected to Supabase (Cloud Live)" : "Local Storage Mode (Pending Cloud Connection)"}
                   </strong>
                 </div>
               </div>
 
-              <div style={{ flex: 1, minWidth: "240px", background: "var(--stone-50)", padding: "16px", borderRadius: "10px", border: "1px solid var(--stone-200)" }}>
-                <span style={{ fontSize: "12px", color: "var(--stone-500)", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>Supabase Configuration</span>
+              <div style={{ background: "var(--stone-50)", padding: "14px", borderRadius: "10px", border: "1px solid var(--stone-200)" }}>
+                <span style={{ fontSize: "11px", color: "var(--stone-500)", textTransform: "uppercase", letterSpacing: "0.5px", fontWeight: 600 }}>Supabase Configuration</span>
                 <div style={{ display: "flex", alignItems: "center", gap: "8px", marginTop: "6px" }}>
                   {configured ? (
                     <span className="badge badge-green"><Check className="h-3 w-3" /> Credentials Set</span>
@@ -243,7 +313,7 @@ export default function SettingsPage() {
                   background: testResult.success ? "#f0fdf4" : "#fef2f2",
                   border: `1px solid ${testResult.success ? "#bbf7d0" : "#fecaca"}`,
                   borderRadius: "8px",
-                  padding: "12px 16px",
+                  padding: "12px 14px",
                   marginBottom: "16px",
                   fontSize: "13px",
                   color: testResult.success ? "#16a34a" : "#dc2626",
@@ -252,14 +322,14 @@ export default function SettingsPage() {
                   gap: "10px",
                 }}
               >
-                {testResult.success ? <CheckCircle2 className="h-5 w-5 flex-shrink-0" /> : <AlertCircle className="h-5 w-5 flex-shrink-0" />}
-                <div>{testResult.message}</div>
+                {testResult.success ? <CheckCircle2 className="h-5 w-5 flex-shrink-0 mt-0.5" /> : <AlertCircle className="h-5 w-5 flex-shrink-0 mt-0.5" />}
+                <div style={{ wordBreak: "break-word", minWidth: 0, flex: 1 }}>{testResult.message}</div>
               </div>
             )}
 
-            <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+            <div className="flex flex-col sm:flex-row gap-2.5">
               <button
-                className="btn btn-primary"
+                className="btn btn-primary w-full sm:w-auto justify-center"
                 onClick={testSupabaseConnection}
                 disabled={testing}
               >
@@ -267,7 +337,7 @@ export default function SettingsPage() {
               </button>
 
               <button
-                className="btn btn-secondary"
+                className="btn btn-secondary w-full sm:w-auto justify-center"
                 onClick={() => {
                   navigator.clipboard.writeText("supabase/schema.sql");
                   toast("Path copied: supabase/schema.sql");
@@ -281,44 +351,44 @@ export default function SettingsPage() {
           {/* Workspace Preferences */}
           <section className="card">
             <div className="settings-heading">
-              <div className="icon-tile blush">
+              <div className="icon-tile blush flex-shrink-0">
                 <Settings className="h-5 w-5" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <h2>Workspace preferences</h2>
                 <p>These settings apply to your current session.</p>
               </div>
             </div>
             <div className="divider" />
             <div className="preference-row">
-              <div>
+              <div className="min-w-0 flex-1">
                 <strong>Currency display</strong>
                 <p>Indian Rupee with en-IN number formatting</p>
               </div>
-              <span className="badge badge-green"><Check className="h-3 w-3" /> INR ₹</span>
+              <span className="badge badge-green flex-shrink-0"><Check className="h-3 w-3" /> INR ₹</span>
             </div>
             <div className="preference-row">
-              <div>
+              <div className="min-w-0 flex-1">
                 <strong>Time zone</strong>
                 <p>Dates and activity timestamps use India Standard Time</p>
               </div>
-              <span className="badge badge-blue">Asia/Kolkata</span>
+              <span className="badge badge-blue flex-shrink-0">Asia/Kolkata</span>
             </div>
             <label className="toggle-row">
-              <span>
+              <span className="min-w-0 flex-1">
                 <strong>Compact tables</strong>
                 <small>Use tighter rows when reviewing larger datasets.</small>
               </span>
-              <input type="checkbox" checked={compact} onChange={e => setCompact(e.target.checked)} />
+              <input type="checkbox" className="flex-shrink-0" checked={compact} onChange={e => setCompact(e.target.checked)} />
             </label>
             <label className="toggle-row">
-              <span>
+              <span className="min-w-0 flex-1">
                 <strong>Show paise</strong>
                 <small>Display decimal paise in financial amounts where available.</small>
               </span>
-              <input type="checkbox" checked={showCents} onChange={e => setShowCents(e.target.checked)} />
+              <input type="checkbox" className="flex-shrink-0" checked={showCents} onChange={e => setShowCents(e.target.checked)} />
             </label>
-            <button className="btn btn-primary" onClick={savePreferences}>
+            <button className="btn btn-primary w-full sm:w-auto justify-center mt-3" onClick={savePreferences}>
               {saved ? <><Check className="h-4 w-4" /> Saved</> : "Save preferences"}
             </button>
           </section>
@@ -326,10 +396,10 @@ export default function SettingsPage() {
           {/* About Home */}
           <section className="card settings-about">
             <div className="settings-heading">
-              <div className="icon-tile sage">
+              <div className="icon-tile sage flex-shrink-0">
                 <Sparkles className="h-5 w-5" />
               </div>
-              <div>
+              <div className="min-w-0 flex-1">
                 <h2>About Home</h2>
                 <p>Calm, focused workspace for hostel operations.</p>
               </div>
@@ -339,7 +409,8 @@ export default function SettingsPage() {
             <InfoRow label="Access Mode" value="Authenticated Admin Portal" />
             <InfoRow label="Account Security" value="Strict Admin Approval Enforced" />
             <InfoRow label="Database Engine" value="Supabase PostgreSQL" />
-            <InfoRow label="Current User" value={app.currentUser?.email || "Not signed in"} />
+            <InfoRow label="Current User" value={app.isAdmin ? "admin (Admin)" : "user (User)"} />
+            <InfoRow label="Access Level" value={app.isAdmin ? "Only Admin (Full Control & Audit Purge)" : "Standard User"} />
           </section>
         </div>
       </div>
@@ -350,8 +421,8 @@ export default function SettingsPage() {
 function InfoRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="info-row">
-      <span>{label}</span>
-      <strong>{value}</strong>
+      <span className="text-stone-400 text-xs flex-shrink-0">{label}</span>
+      <strong className="text-stone-700 text-xs text-right break-all sm:break-normal max-w-[65%]">{value}</strong>
     </div>
   );
 }

@@ -18,7 +18,7 @@ export interface AdminUser {
   id: string;
   email: string;
   fullName: string;
-  role: "super_admin" | "admin";
+  role: "super_admin" | "admin" | "user";
   status: "approved" | "pending" | "rejected";
   approvedBy?: string;
   approvedAt?: string;
@@ -428,6 +428,44 @@ export async function logActivityToSupabase(action: string, entityType: string, 
     });
   } catch (e) {
     console.error("Failed to log activity:", e);
+  }
+}
+
+export async function clearActivityLogsInSupabase(
+  options: { mode: "all" } | { mode: "before"; timestamp: string } | { mode: "range"; start: string; end: string }
+): Promise<number> {
+  if (!isSupabaseConfigured()) return 0;
+  try {
+    if (options.mode === "all") {
+      const { data, error } = await supabase
+        .from("activity_logs")
+        .delete()
+        .gte("timestamp", "1970-01-01T00:00:00.000Z")
+        .select("id");
+      if (error) throw error;
+      return data?.length ?? 0;
+    } else if (options.mode === "before") {
+      const { data, error } = await supabase
+        .from("activity_logs")
+        .delete()
+        .lte("timestamp", options.timestamp)
+        .select("id");
+      if (error) throw error;
+      return data?.length ?? 0;
+    } else if (options.mode === "range") {
+      const { data, error } = await supabase
+        .from("activity_logs")
+        .delete()
+        .gte("timestamp", options.start)
+        .lte("timestamp", options.end)
+        .select("id");
+      if (error) throw error;
+      return data?.length ?? 0;
+    }
+    return 0;
+  } catch (err) {
+    console.error("Failed to clear activity logs in Supabase:", err);
+    throw err;
   }
 }
 

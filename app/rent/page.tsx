@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Plus, RefreshCw, CreditCard } from "lucide-react";
+import { Plus, RefreshCw, CreditCard, Search, Filter, ArrowUpDown, RotateCcw } from "lucide-react";
 import { useApp, formatRupee, currentMonthKey } from "@/lib/AppContext";
 import { useToast } from "@/components/ToastProvider";
 import PaymentDialog from "@/components/PaymentDialog";
@@ -34,6 +34,10 @@ export default function RentPage() {
   const { toast } = useToast();
   const [filterMonth, setFilterMonth]  = useState(currentMonthKey());
   const [filterResident, setFilterResident] = useState("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "unpaid" | "paid" | "partial">("all");
+  const [filterFloor, setFilterFloor] = useState<"all" | "100" | "200" | "300" | "400">("all");
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<"room" | "name" | "outstanding" | "charged">("room");
   const [showPayment,    setShowPayment]    = useState(false);
   const [payResidentId,  setPayResidentId]  = useState<string | undefined>();
   const [showChargeDialog, setShowChargeDialog] = useState(false);
@@ -45,10 +49,61 @@ export default function RentPage() {
     return [...set].sort().reverse();
   }, [app.rentCharges]);
 
-  const chargesForMonth = useMemo(() =>
-    app.rentCharges.filter(c => c.month === filterMonth && (filterResident === "all" || c.residentId === filterResident)),
-    [app.rentCharges, filterMonth, filterResident]
-  );
+  // Filtered charges for month
+  const chargesForMonth = useMemo(() => {
+    return app.rentCharges
+      .filter(c => {
+        if (c.month !== filterMonth) return false;
+        if (filterResident !== "all" && c.residentId !== filterResident) return false;
+
+        const resident = app.residents.find(r => r.id === c.residentId);
+        const roomNum = resident?.roomNumber ?? "";
+
+        // Floor / Series filter
+        if (filterFloor === "100" && !roomNum.startsWith("1")) return false;
+        if (filterFloor === "200" && !roomNum.startsWith("2")) return false;
+        if (filterFloor === "300" && !roomNum.startsWith("3")) return false;
+        if (filterFloor === "400" && !roomNum.startsWith("4")) return false;
+
+        // Search text
+        const q = search.toLowerCase().trim();
+        if (q) {
+          const matchName = resident?.fullName.toLowerCase().includes(q);
+          const matchRoom = roomNum.toLowerCase().includes(q);
+          if (!matchName && !matchRoom) return false;
+        }
+
+        // Status filter
+        if (filterStatus !== "all") {
+          const balance = app.getRentChargeBalance(c.id);
+          const paid = balance.paid;
+          const outstanding = balance.outstanding;
+          const status = paid === 0 ? "unpaid" : outstanding === 0 ? "paid" : "partial";
+          if (filterStatus !== status) return false;
+        }
+
+        return true;
+      })
+      .sort((a, b) => {
+        const resA = app.residents.find(r => r.id === a.residentId);
+        const resB = app.residents.find(r => r.id === b.residentId);
+        if (sortBy === "room") {
+          return (resA?.roomNumber || "").localeCompare(resB?.roomNumber || "", undefined, { numeric: true, sensitivity: "base" });
+        }
+        if (sortBy === "name") {
+          return (resA?.fullName || "").localeCompare(resB?.fullName || "");
+        }
+        if (sortBy === "outstanding") {
+          const outA = app.getRentChargeBalance(a.id).outstanding;
+          const outB = app.getRentChargeBalance(b.id).outstanding;
+          return outB - outA;
+        }
+        if (sortBy === "charged") {
+          return b.amountPaise - a.amountPaise;
+        }
+        return 0;
+      });
+  }, [app, filterMonth, filterResident, filterFloor, filterStatus, search, sortBy]);
 
   const handlePayment = (data: PaymentFormData) => {
     const paise = Math.round(Number(data.amountStr) * 100);
@@ -79,6 +134,8 @@ export default function RentPage() {
     .reduce((s, p) => s + p.amountPaise, 0);
   const outstanding = Math.max(0, totalCharged - totalPaid);
 
+  const hasActiveFilters = search || filterResident !== "all" || filterStatus !== "all" || filterFloor !== "all" || sortBy !== "room";
+
   return (
     <>
       <div className="page-header">
@@ -99,22 +156,112 @@ export default function RentPage() {
 
       <div className="page-body">
         {/* Filters */}
-        <div className="filter-bar mb-4">
-          <div className="flex flex-col sm:flex-row gap-2.5 w-full">
-            <div className="form-group flex-1" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
-              <label className="form-label" style={{ whiteSpace: "nowrap" }}>Month:</label>
-              <select className="form-select flex-1" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
-                {months.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
+        <div className="card mb-4">
+          <div className="flex flex-col gap-3">
+            {/* Top row: search + month + resident */}
+            <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-stone-400" />
+                <input
+                  type="search"
+                  className="form-input w-full"
+                  style={{ paddingLeft: "34px" }}
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search resident or room…"
+                  aria-label="Search rent charges"
+                />
+              </div>
+
+              <div className="flex flex-wrap gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-1.5 flex-1 sm:flex-initial">
+                  <span className="text-xs text-stone-500 font-medium">Month:</span>
+                  <select className="form-select text-xs py-1 px-2.5 flex-1 sm:w-auto" value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
+                    {months.map(m => <option key={m} value={m}>{m}</option>)}
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1.5 flex-1 sm:flex-initial">
+                  <span className="text-xs text-stone-500 font-medium">Resident:</span>
+                  <select className="form-select text-xs py-1 px-2.5 flex-1 sm:w-auto" value={filterResident} onChange={e => setFilterResident(e.target.value)}>
+                    <option value="all">All Residents</option>
+                    {app.residents.filter(r => r.status === "active").map(r =>
+                      <option key={r.id} value={r.id}>{r.fullName}</option>
+                    )}
+                  </select>
+                </div>
+              </div>
             </div>
-            <div className="form-group flex-1" style={{ flexDirection: "row", alignItems: "center", gap: "8px" }}>
-              <label className="form-label" style={{ whiteSpace: "nowrap" }}>Resident:</label>
-              <select className="form-select flex-1" value={filterResident} onChange={e => setFilterResident(e.target.value)}>
-                <option value="all">All Residents</option>
-                {app.residents.filter(r => r.status === "active").map(r =>
-                  <option key={r.id} value={r.id}>{r.fullName}</option>
+
+            {/* Bottom row: Status pills + Floor + Sort + Reset */}
+            <div className="flex flex-wrap gap-2 items-center justify-between pt-2.5 border-t border-stone-100 text-xs">
+              <div className="flex flex-wrap items-center gap-1.5 w-full sm:w-auto">
+                <span className="text-stone-500 font-medium mr-1 flex items-center gap-1">
+                  <Filter className="h-3 w-3" /> Status:
+                </span>
+                {[
+                  { id: "all", label: "All" },
+                  { id: "unpaid", label: "Unpaid" },
+                  { id: "partial", label: "Partial" },
+                  { id: "paid", label: "Paid" },
+                ].map(s => (
+                  <button
+                    key={s.id}
+                    type="button"
+                    className={`btn btn-sm ${filterStatus === s.id ? "btn-primary" : "btn-secondary"}`}
+                    onClick={() => setFilterStatus(s.id as typeof filterStatus)}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+                <div className="flex items-center gap-1">
+                  <span className="text-stone-500">Floor:</span>
+                  <select
+                    className="form-select text-xs py-1 px-2"
+                    value={filterFloor}
+                    onChange={e => setFilterFloor(e.target.value as typeof filterFloor)}
+                  >
+                    <option value="all">All Floors</option>
+                    <option value="100">101 Series</option>
+                    <option value="200">201 Series</option>
+                    <option value="300">301 Series</option>
+                    <option value="400">401 Series</option>
+                  </select>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <ArrowUpDown className="h-3 w-3 text-stone-400" />
+                  <select
+                    className="form-select text-xs py-1 px-2 font-medium"
+                    value={sortBy}
+                    onChange={e => setSortBy(e.target.value as typeof sortBy)}
+                  >
+                    <option value="room">Room Number</option>
+                    <option value="name">Resident Name</option>
+                    <option value="outstanding">Highest Outstanding</option>
+                    <option value="charged">Highest Charged</option>
+                  </select>
+                </div>
+
+                {hasActiveFilters && (
+                  <button
+                    type="button"
+                    className="btn btn-secondary btn-sm text-xs py-1 px-2 text-stone-600 hover:text-stone-900"
+                    onClick={() => {
+                      setSearch("");
+                      setFilterResident("all");
+                      setFilterStatus("all");
+                      setFilterFloor("all");
+                      setSortBy("room");
+                    }}
+                  >
+                    <RotateCcw className="h-3 w-3" /> Reset
+                  </button>
                 )}
-              </select>
+              </div>
             </div>
           </div>
         </div>

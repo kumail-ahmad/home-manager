@@ -122,9 +122,14 @@ function SidebarContent({
             {isLiveBackend && <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-mono font-medium">Live</span>}
           </div>
           {currentUser && (
-            <p className="text-[11px] text-stone-500 truncate">
-              {currentUser.fullName || currentUser.email} ({currentUser.role === "super_admin" ? "Super Admin" : "Admin"})
-            </p>
+            <div className="flex items-center justify-between pt-1 border-t border-stone-200/60 mt-1">
+              <span className="text-[11px] font-semibold text-stone-800 truncate">
+                {currentUser.email === "admin" || currentUser.role === "super_admin" ? "admin" : "user"}
+              </span>
+              <span className={`badge ${currentUser.email === "admin" || currentUser.role === "super_admin" ? "badge-blush" : "badge-stone"} text-[10px] py-0 px-1.5`}>
+                {currentUser.email === "admin" || currentUser.role === "super_admin" ? "Admin" : "User"}
+              </span>
+            </div>
           )}
         </div>
         <button onClick={onSignOut} className="nav-item w-full text-red-500 hover:bg-red-50">

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Plus, Users, BedDouble, Edit2, UserMinus, UserPlus, Search } from "lucide-react";
+import { Plus, Users, BedDouble, Edit2, UserMinus, UserPlus, Search, ArrowUpDown, Filter } from "lucide-react";
 import { useApp, formatRupee } from "@/lib/AppContext";
 import { useToast } from "@/components/ToastProvider";
 import Dialog from "@/components/Dialog";
@@ -121,10 +121,13 @@ function AssignDialog({ open, onClose, room }: { open: boolean; onClose: () => v
 export default function RoomsPage() {
   const app  = useApp();
   const { toast } = useToast();
-  const [showAdd, setShowAdd]   = useState(false);
-  const [editing, setEditing]   = useState<Room | null>(null);
+  const [showAdd, setShowAdd]     = useState(false);
+  const [editing, setEditing]     = useState<Room | null>(null);
   const [assigning, setAssigning] = useState<Room | null>(null);
-  const [search, setSearch] = useState("");
+  const [search, setSearch]       = useState("");
+  const [filterFloor, setFilterFloor] = useState<"all" | "100" | "200" | "300" | "400">("all");
+  const [filterStatus, setFilterStatus] = useState<"all" | "available" | "full" | "empty">("all");
+  const [sortBy, setSortBy]       = useState<"asc" | "desc" | "available" | "capacity-desc" | "capacity-asc">("asc");
 
   const handleSaveRoom = (d: { roomNumber: string; capacity: number; notes: string }) => {
     try {
@@ -151,6 +154,72 @@ export default function RoomsPage() {
   const totalBeds    = app.rooms.reduce((s, r) => s + r.capacity, 0);
   const occupiedBeds = app.rooms.reduce((s, r) => s + r.residentIds.length, 0);
 
+  // Floor counts for quick filters
+  const floorCounts = useMemo(() => {
+    return {
+      all: app.rooms.length,
+      "100": app.rooms.filter(r => r.roomNumber.startsWith("1")).length,
+      "200": app.rooms.filter(r => r.roomNumber.startsWith("2")).length,
+      "300": app.rooms.filter(r => r.roomNumber.startsWith("3")).length,
+      "400": app.rooms.filter(r => r.roomNumber.startsWith("4")).length,
+    };
+  }, [app.rooms]);
+
+  // Filtered and sorted rooms
+  const filteredRooms = useMemo(() => {
+    return app.rooms
+      .filter(room => {
+        // 1. Search text filter
+        const q = search.toLowerCase().trim();
+        const matchesSearch = !q ||
+          room.roomNumber.toLowerCase().includes(q) ||
+          room.notes.toLowerCase().includes(q) ||
+          app.residents.some(r => room.residentIds.includes(r.id) && r.fullName.toLowerCase().includes(q));
+
+        // 2. Floor / Series filter (101, 201, 301, 401...)
+        const matchesFloor =
+          filterFloor === "all" ||
+          (filterFloor === "100" && room.roomNumber.startsWith("1")) ||
+          (filterFloor === "200" && room.roomNumber.startsWith("2")) ||
+          (filterFloor === "300" && room.roomNumber.startsWith("3")) ||
+          (filterFloor === "400" && room.roomNumber.startsWith("4"));
+
+        // 3. Occupancy Status filter
+        const occupantsCount = room.residentIds.length;
+        const isFull = occupantsCount >= room.capacity;
+        const isEmpty = occupantsCount === 0;
+        const isAvailable = !isFull;
+
+        const matchesStatus =
+          filterStatus === "all" ||
+          (filterStatus === "available" && isAvailable) ||
+          (filterStatus === "full" && isFull) ||
+          (filterStatus === "empty" && isEmpty);
+
+        return matchesSearch && matchesFloor && matchesStatus;
+      })
+      .sort((a, b) => {
+        if (sortBy === "asc") {
+          return a.roomNumber.localeCompare(b.roomNumber, undefined, { numeric: true, sensitivity: "base" });
+        }
+        if (sortBy === "desc") {
+          return b.roomNumber.localeCompare(a.roomNumber, undefined, { numeric: true, sensitivity: "base" });
+        }
+        if (sortBy === "available") {
+          const availA = a.capacity - a.residentIds.length;
+          const availB = b.capacity - b.residentIds.length;
+          return availB - availA;
+        }
+        if (sortBy === "capacity-desc") {
+          return b.capacity - a.capacity;
+        }
+        if (sortBy === "capacity-asc") {
+          return a.capacity - b.capacity;
+        }
+        return 0;
+      });
+  }, [app.rooms, app.residents, search, filterFloor, filterStatus, sortBy]);
+
   return (
     <>
       <div className="page-header">
@@ -165,7 +234,7 @@ export default function RoomsPage() {
 
       <div className="page-body">
         {/* Summary bar */}
-        <div className="grid-cards grid-stats mb-6">
+        <div className="grid-cards grid-stats mb-5 sm:mb-6">
           {[
             { label: "Total Rooms",   value: app.rooms.length,           icon: BedDouble, color: "var(--blush-500)" },
             { label: "Occupied Beds", value: `${occupiedBeds}/${totalBeds}`, icon: Users,     color: "var(--sage-500)" },
@@ -178,10 +247,86 @@ export default function RoomsPage() {
           ))}
         </div>
 
-        <div className="filter-bar mb-4">
-          <div style={{ position: "relative", flex: 1, maxWidth: "320px" }}>
-            <Search className="h-4 w-4" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--stone-400)" }} />
-            <input className="form-input" style={{ paddingLeft: "34px" }} value={search} onChange={e => setSearch(e.target.value)} placeholder="Search rooms…" aria-label="Search rooms" />
+        {/* Filter and sorting controls */}
+        <div className="card mb-5 p-3 sm:p-4 bg-white/80 backdrop-blur-xs">
+          <div className="flex flex-col gap-3">
+            {/* Top row: search + floor chips */}
+            <div className="flex flex-col sm:flex-row gap-2.5 items-stretch sm:items-center justify-between">
+              <div style={{ position: "relative", flex: 1, minWidth: "220px", maxWidth: "340px" }} className="w-full sm:w-auto">
+                <Search className="h-4 w-4" style={{ position: "absolute", left: "10px", top: "50%", transform: "translateY(-50%)", color: "var(--stone-400)" }} />
+                <input
+                  className="form-input"
+                  style={{ paddingLeft: "34px" }}
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Search by room or notes…"
+                  aria-label="Search rooms"
+                />
+              </div>
+
+              {/* Floor / Series filter chips */}
+              <div className="flex flex-wrap gap-1.5 w-full sm:w-auto">
+                {[
+                  { id: "all", label: "All", count: floorCounts.all },
+                  { id: "100", label: "101 Series", count: floorCounts["100"] },
+                  { id: "200", label: "201 Series", count: floorCounts["200"] },
+                  { id: "300", label: "301 Series", count: floorCounts["300"] },
+                  { id: "400", label: "401 Series", count: floorCounts["400"] },
+                ].map(f => (
+                  <button
+                    key={f.id}
+                    type="button"
+                    className={`btn btn-sm ${filterFloor === f.id ? "btn-primary" : "btn-secondary"}`}
+                    onClick={() => setFilterFloor(f.id as typeof filterFloor)}
+                  >
+                    <span>{f.label}</span>
+                    <span className={`text-[10px] ml-1 px-1.5 py-0.2 rounded-full ${filterFloor === f.id ? "bg-white/20 text-white" : "bg-stone-100 text-stone-500"}`}>
+                      {f.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Bottom row: status & sort order */}
+            <div className="flex flex-wrap gap-2 items-center justify-between pt-2 border-t border-stone-100 text-xs">
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-1.5 text-stone-500 font-medium">
+                  <Filter className="h-3.5 w-3.5 text-stone-400" />
+                  <span>Status:</span>
+                </div>
+                <select
+                  className="form-select flex-1 sm:w-auto text-xs py-1 px-2.5"
+                  value={filterStatus}
+                  onChange={e => setFilterStatus(e.target.value as typeof filterStatus)}
+                  aria-label="Filter by room status"
+                >
+                  <option value="all">All Occupancy ({app.rooms.length})</option>
+                  <option value="available">Available with vacant beds</option>
+                  <option value="full">Full capacity</option>
+                  <option value="empty">Empty (0 residents)</option>
+                </select>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <div className="flex items-center gap-1.5 text-stone-500 font-medium">
+                  <ArrowUpDown className="h-3.5 w-3.5 text-stone-400" />
+                  <span>Sort:</span>
+                </div>
+                <select
+                  className="form-select flex-1 sm:w-auto text-xs py-1 px-2.5 font-medium"
+                  value={sortBy}
+                  onChange={e => setSortBy(e.target.value as typeof sortBy)}
+                  aria-label="Sort rooms"
+                >
+                  <option value="asc">Room Number (Ascending: 101, 201…)</option>
+                  <option value="desc">Room Number (Descending: 402, 301…)</option>
+                  <option value="available">Most Available Beds</option>
+                  <option value="capacity-desc">Capacity: High to Low</option>
+                  <option value="capacity-asc">Capacity: Low to High</option>
+                </select>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -194,9 +339,21 @@ export default function RoomsPage() {
               <Plus className="h-3.5 w-3.5" /> Add Room
             </button>
           </div></div>
+        ) : filteredRooms.length === 0 ? (
+          <div className="card"><div className="empty-state">
+            <BedDouble style={{ width: 32, height: 32 }} />
+            <h3>No rooms match your filter</h3>
+            <p>Try clearing filters or search to view all rooms.</p>
+            <button
+              className="btn btn-secondary btn-sm mt-3"
+              onClick={() => { setSearch(""); setFilterFloor("all"); setFilterStatus("all"); }}
+            >
+              Reset Filters
+            </button>
+          </div></div>
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
-             {app.rooms.filter(room => room.roomNumber.toLowerCase().includes(search.toLowerCase())).map(room => {
+             {filteredRooms.map(room => {
               const occupants = app.residents.filter(r => room.residentIds.includes(r.id));
               const full = occupants.length >= room.capacity;
               return (
